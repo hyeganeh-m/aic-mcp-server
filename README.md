@@ -134,7 +134,54 @@ Open the Copilot Chat panel in VS Code (`Cmd + Shift + I` or `Ctrl + Shift + I`)
 
 ---
 
-#### C. Claude Desktop
+#### C. GitHub Copilot CLI (`copilot-cli` / `gh copilot`)
+GitHub Copilot CLI supports MCP servers defined either at the project level (within a repository) or globally for all CLI sessions.
+
+##### Option 1: Project-Level Configuration (`.mcp.json`)
+Create a `.mcp.json` file in your repository root:
+
+```json
+{
+  "mcpServers": {
+    "ping-platform": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/path/to/aic-mcp-server/dist/index.js"
+      ],
+      "env": {
+        "AM_BASE_URL": "http://am.ping.local:8080/am",
+        "IDM_BASE_URL": "http://localhost:8082/openidm",
+        "AM_REALM": "customers",
+        "AM_ADMIN_USERNAME": "amadmin",
+        "AM_ADMIN_PASSWORD": "<your-am-admin-password>",
+        "IDM_ADMIN_USERNAME": "openidm-admin",
+        "IDM_ADMIN_PASSWORD": "<your-idm-admin-password>"
+      }
+    }
+  }
+}
+```
+
+##### Option 2: Global User Configuration (`~/.copilot/mcp-config.json`)
+To make the Ping Platform tools available across all repositories in Copilot CLI, create or edit `~/.copilot/mcp-config.json` with the same JSON structure above.
+
+##### Option 3: Interactive CLI Command
+You can also register the server interactively within the Copilot CLI prompt:
+```bash
+/mcp add ping-platform node /path/to/aic-mcp-server/dist/index.js
+```
+
+**Test in Copilot CLI:**
+Run Copilot CLI and ask:
+```bash
+copilot
+> List all available realms in my PingAM instance
+```
+
+---
+
+#### D. Claude Desktop
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
@@ -161,7 +208,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ---
 
-#### D. Cursor IDE
+#### E. Cursor IDE
 Add to `.cursor/mcp.json` or open **Cursor Settings > Features > MCP**:
 - **Name**: `ping-platform`
 - **Type**: `command`
