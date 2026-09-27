@@ -16,18 +16,48 @@ export async function makeAuthenticatedRequest(
   scopes: string[],
   options: RequestInit = {}
 ): Promise<{ data: unknown; response: Response }> {
-  const token = await getAuthService().getToken(scopes);
+  let authHeaders: Record<string, string> = {};
+
+  const isIdmRequest = url.includes('/openidm/');
+
+  if (isIdmRequest) {
+    if (process.env.IDM_AUTH_TOKEN) {
+      authHeaders = {
+        'Authorization': `Basic ${process.env.IDM_AUTH_TOKEN}`,
+        ...(process.env.IDM_ADMIN_USERNAME && { 'X-OpenIDM-Username': process.env.IDM_ADMIN_USERNAME }),
+        ...(process.env.IDM_ADMIN_PASSWORD && { 'X-OpenIDM-Password': process.env.IDM_ADMIN_PASSWORD })
+      };
+    } else if (process.env.IDM_ADMIN_USERNAME && process.env.IDM_ADMIN_PASSWORD) {
+      const basic = Buffer.from(
+        `${process.env.IDM_ADMIN_USERNAME}:${process.env.IDM_ADMIN_PASSWORD}`
+      ).toString('base64');
+      authHeaders = {
+        'Authorization': `Basic ${basic}`,
+        'X-OpenIDM-Username': process.env.IDM_ADMIN_USERNAME,
+        'X-OpenIDM-Password': process.env.IDM_ADMIN_PASSWORD
+      };
+    } else {
+      const token = await getAuthService().getToken(scopes);
+      authHeaders = {
+        'Authorization': `Bearer ${token}`
+      };
+    }
+  } else {
+    authHeaders = await getAuthService().getAuthHeader(scopes);
+  }
+
 
   const response = await fetch(url, {
     ...options,
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...authHeaders,
       'User-Agent': USER_AGENT,
       // Only add Content-Type header if the request has a body
       ...(options.body && { 'Content-Type': 'application/json' }),
       ...options.headers
     }
   });
+
 
   if (!response.ok) {
     const errorBody = await response.text();

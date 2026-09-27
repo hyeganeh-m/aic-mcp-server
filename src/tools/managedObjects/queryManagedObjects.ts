@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/queryManagedObjects.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -74,7 +75,7 @@ export const queryManagedObjectsTool = {
   }) {
     try {
       // Build query URL using URL constructor for proper encoding
-      const url = new URL(`https://${aicBaseUrl}/openidm/managed/${objectType}`);
+      const url = new URL(`${getIdmBaseUrl()}/managed/${objectType}`);
 
       // Query filter - default to 'true' to return all objects
       url.searchParams.append('_queryFilter', queryFilter || 'true');

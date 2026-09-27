@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/patchManagedObject.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -57,7 +58,7 @@ export const patchManagedObjectTool = {
     revision: string;
     operations: Array<{ operation: string; field: string; value?: any }>;
   }) {
-    const url = `https://${aicBaseUrl}/openidm/managed/${objectType}/${objectId}`;
+    const url = `${getIdmBaseUrl()}/managed/${objectType}/${objectId}`;
 
     try {
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES, {

@@ -7,6 +7,10 @@
     "realm": {
       "_def": {
         "values": [
+          "customers",
+          "employees",
+          "service-accounts",
+          "root",
           "alpha",
           "bravo"
         ],

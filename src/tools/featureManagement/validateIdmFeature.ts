@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/featureManagement/validateIdmFeature.ts
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -39,7 +40,7 @@ export const validateIdmFeatureTool = {
   async toolFunction({ featureName }: { featureName: string }) {
     try {
       const encodedPath = encodeFeatureNamePath(featureName);
-      const url = `https://${aicBaseUrl}/openidm/feature/${encodedPath}?_action=validate`;
+      const url = `${getIdmBaseUrl()}/feature/${encodedPath}?_action=validate`;
 
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES, {
         method: 'POST',

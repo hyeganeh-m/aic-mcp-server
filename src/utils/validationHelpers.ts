@@ -8,8 +8,16 @@
 
 import { z } from 'zod';
 
-// Realms supported in the environment
-export const REALMS = ['alpha', 'bravo'] as const;
+// Realms supported in the environment (local Ping platform + AIC)
+export const REALMS = [
+  'customers',
+  'employees',
+  'service-accounts',
+  'root',
+  'alpha',
+  'bravo'
+] as const;
+
 
 /**
  * Validates that a value is safe to use in a URL path segment.

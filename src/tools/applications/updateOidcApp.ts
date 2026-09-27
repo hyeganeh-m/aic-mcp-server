@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 
@@ -83,7 +84,7 @@ export const updateOidcAppTool = {
 
       // Look up IDM managed application by name to resolve _id and clientId
       const idmQueryUrl =
-        `https://${aicBaseUrl}/openidm/managed/${realm}_application` +
+        `${getIdmBaseUrl()}/managed/${realm}_application` +
         `?_queryFilter=${encodeURIComponent(`name eq "${name}"`)}&_fields=_id,ssoEntities`;
       const { data: queryData } = await makeAuthenticatedRequest(idmQueryUrl, SCOPES, {
         method: 'GET'
@@ -138,7 +139,7 @@ export const updateOidcAppTool = {
           (op) => !op.field.startsWith('/ssoEntities') && op.field !== 'ssoEntities'
         );
 
-        const idmUrl = `https://${aicBaseUrl}/openidm/managed/${realm}_application/${appRecord._id}`;
+        const idmUrl = `${getIdmBaseUrl()}/managed/${realm}_application/${appRecord._id}`;
         const { data, response } = await makeAuthenticatedRequest(idmUrl, SCOPES, {
           method: 'PATCH',
           headers: {

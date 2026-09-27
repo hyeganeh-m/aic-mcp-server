@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 
 const aicBaseUrl = process.env.AIC_BASE_URL;
@@ -17,7 +18,7 @@ export const listManagedObjectsTool = {
     // No parameters needed
   },
   async toolFunction() {
-    const url = `https://${aicBaseUrl}/openidm/config/managed`;
+    const url = `${getIdmBaseUrl()}/config/managed`;
 
     try {
       const { data } = await makeAuthenticatedRequest(url, SCOPES);

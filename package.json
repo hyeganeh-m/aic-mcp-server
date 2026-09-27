@@ -1,8 +1,10 @@
 {
-  "name": "@ping-identity/aic-mcp-server",
+  "name": "ping-platform-mcp-server",
   "version": "1.0.0",
+  "description": "Universal Model Context Protocol (MCP) server for Ping Identity platforms (PingAM, PingIDM, and PingOne Advanced Identity Cloud)",
   "main": "dist/index.js",
   "bin": {
+    "ping-platform-mcp-server": "dist/index.js",
     "aic-mcp-server": "dist/index.js"
   },
   "license": "Apache-2.0",
@@ -12,12 +14,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pingidentity/aic-mcp-server.git"
+    "url": "git+https://github.com/hyeganeh-m/aic-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/pingidentity/aic-mcp-server/issues"
+    "url": "https://github.com/hyeganeh-m/aic-mcp-server/issues"
   },
-  "homepage": "https://github.com/pingidentity/aic-mcp-server#readme",
+  "homepage": "https://github.com/hyeganeh-m/aic-mcp-server#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -44,7 +46,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "docker:build": "docker build -t pingidentity/aic-mcp-server:latest .",
-    "docker:run": "docker run --rm -i -e AIC_BASE_URL=${AIC_BASE_URL} pingidentity/aic-mcp-server:latest"
+    "docker:run": "docker run --rm -i -e AIC_BASE_URL=${AIC_BASE_URL} pingidentity/aic-mcp-server:latest",
+    "test:scenarios": "node test-ai-scenarios.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

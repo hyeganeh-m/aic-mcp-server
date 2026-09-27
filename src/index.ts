@@ -20,7 +20,8 @@ const server = new McpServer({
 // Initialize auth service with all scopes and MCP server reference
 // MCP server is required for device code flow URL elicitation
 initAuthService(allScopes, {
-  mcpServer: server
+  mcpServer: server,
+  allowCachedOnFirstRequest: true
 });
 
 // Register all tools

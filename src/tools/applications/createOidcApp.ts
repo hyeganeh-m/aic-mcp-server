@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -81,7 +82,7 @@ export const createOidcAppTool = {
         templateVersion: '1.0'
       };
 
-      const idmUrl = `https://${aicBaseUrl}/openidm/managed/${realm}_application?_action=create`;
+      const idmUrl = `${getIdmBaseUrl()}/managed/${realm}_application?_action=create`;
       const { data: idmData, response: idmResponse } = await makeAuthenticatedRequest(idmUrl, SCOPES, {
         method: 'POST',
         body: JSON.stringify(idmPayload)

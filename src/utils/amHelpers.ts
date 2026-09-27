@@ -10,8 +10,8 @@
 
 import { randomUUID } from 'crypto';
 import { makeAuthenticatedRequest } from './apiHelpers.js';
+import { getAmBaseUrl } from './urlHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
 
 /**
  * Standard headers for AM API requests (protocol 2.1, resource 1.0).
@@ -164,7 +164,11 @@ export interface ConfigResult {
  * // Returns: 'https://tenant.forgeblocks.com/am/json/alpha/scripts/abc-123'
  */
 export function buildAMRealmUrl(realm: string, path: string): string {
-  return `https://${aicBaseUrl}/am/json/${realm}/${path}`;
+  const amBase = getAmBaseUrl();
+  const realmPath = realm === 'root' ? '' : `realms/${realm}/`;
+  // If realm is not 'root' and doesn't already prefix realms/, format appropriately
+  const effectiveRealm = realm === 'root' ? '' : (realm.startsWith('/') ? realm.slice(1) : realm);
+  return `${amBase}/json/${effectiveRealm ? effectiveRealm + '/' : ''}${path}`;
 }
 
 /**
@@ -173,18 +177,13 @@ export function buildAMRealmUrl(realm: string, path: string): string {
  * @param serviceName - The name of the global service (e.g., 'CorsService')
  * @param path - Optional path after '/configuration' (e.g., a policy ID)
  * @returns Full URL for the AM global service configuration endpoint
- *
- * @example
- * buildAMGlobalConfigUrl('CorsService')
- * // Returns: 'https://tenant.forgeblocks.com/am/json/global-config/services/CorsService/configuration'
- *
- * buildAMGlobalConfigUrl('CorsService', 'my-policy-id')
- * // Returns: 'https://tenant.forgeblocks.com/am/json/global-config/services/CorsService/configuration/my-policy-id'
  */
 export function buildAMGlobalConfigUrl(serviceName: string, path?: string): string {
-  const base = `https://${aicBaseUrl}/am/json/global-config/services/${serviceName}/configuration`;
+  const amBase = getAmBaseUrl();
+  const base = `${amBase}/json/global-config/services/${serviceName}/configuration`;
   return path ? `${base}/${path}` : base;
 }
+
 
 /**
  * Builds a URL for a specific AM authentication journey (tree) resource.

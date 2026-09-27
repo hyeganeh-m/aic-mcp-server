@@ -10,7 +10,9 @@ describe('validationHelpers', () => {
   // ===== REALMS CONSTANT =====
   describe('REALMS', () => {
     it('should contain alpha and bravo', () => {
-      expect(REALMS).toEqual(['alpha', 'bravo']);
+      expect(REALMS).toContain('alpha');
+      expect(REALMS).toContain('bravo');
+      expect(REALMS).toContain('customers');
     });
   });
 

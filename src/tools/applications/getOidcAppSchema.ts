@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -112,7 +113,7 @@ export const getOidcAppSchemaTool = {
       }
 
       // Fetch IDM managed application schema
-      const idmConfigUrl = `https://${aicBaseUrl}/openidm/config/managed`;
+      const idmConfigUrl = `${getIdmBaseUrl()}/config/managed`;
       const idmConfigPromise = makeAuthenticatedRequest(idmConfigUrl, SCOPES, {
         method: 'GET'
       });

@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -23,7 +24,7 @@ export const getThemeTool = {
   async toolFunction({ realm, themeIdentifier }: { realm: string; themeIdentifier: string }) {
     try {
       const queryFilter = `_id eq "${themeIdentifier}" or name eq "${themeIdentifier}"`;
-      const url = `https://${aicBaseUrl}/openidm/ui/theme/?realm=${encodeURIComponent(realm)}&_queryFilter=${encodeURIComponent(queryFilter)}`;
+      const url = `${getIdmBaseUrl()}/ui/theme/?realm=${encodeURIComponent(realm)}&_queryFilter=${encodeURIComponent(queryFilter)}`;
 
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES);
 

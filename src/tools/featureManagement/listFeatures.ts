@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/featureManagement/listFeatures.ts
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 
@@ -114,7 +115,7 @@ export const listFeaturesTool = {
   },
   inputSchema: {},
   async toolFunction() {
-    const idmUrl = `https://${aicBaseUrl}/openidm/feature?_queryFilter=true`;
+    const idmUrl = `${getIdmBaseUrl()}/feature?_queryFilter=true`;
     const alphaUrl = amRealmConfigUrl('alpha');
     const bravoUrl = amRealmConfigUrl('bravo');
 

@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -44,7 +45,7 @@ export const updateThemeTool = {
       }
 
       // Get the current theme configuration
-      const configUrl = `https://${aicBaseUrl}/openidm/config/ui/themerealm`;
+      const configUrl = `${getIdmBaseUrl()}/config/ui/themerealm`;
       const { data: config } = await makeAuthenticatedRequest(configUrl, SCOPES);
 
       // Validate config structure

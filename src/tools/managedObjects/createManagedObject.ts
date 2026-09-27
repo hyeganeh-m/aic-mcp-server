@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/createManagedObject.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -29,7 +30,7 @@ export const createManagedObjectTool = {
       .describe('JSON object containing object properties (must include all required fields from the schema)')
   },
   async toolFunction({ objectType, objectData }: { objectType: string; objectData: Record<string, any> }) {
-    const url = `https://${aicBaseUrl}/openidm/managed/${objectType}?_action=create`;
+    const url = `${getIdmBaseUrl()}/managed/${objectType}?_action=create`;
 
     try {
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES, {

@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/featureManagement/installIdmFeature.ts
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -40,7 +41,7 @@ export const installIdmFeatureTool = {
   async toolFunction({ featureName }: { featureName: string }) {
     try {
       const encodedPath = encodeFeatureNamePath(featureName);
-      const url = `https://${aicBaseUrl}/openidm/feature/${encodedPath}?_action=install`;
+      const url = `${getIdmBaseUrl()}/feature/${encodedPath}?_action=install`;
 
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES, {
         method: 'POST',

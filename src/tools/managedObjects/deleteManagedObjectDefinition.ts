@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/managedObjects/deleteManagedObjectDefinition.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -59,7 +60,7 @@ export const deleteManagedObjectDefinitionTool = {
       )
   },
   async toolFunction({ objectName }: { objectName: string }) {
-    const url = `https://${aicBaseUrl}/openidm/config/managed`;
+    const url = `${getIdmBaseUrl()}/config/managed`;
 
     try {
       // GET current config to check existence and references

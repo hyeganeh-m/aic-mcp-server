@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -24,7 +25,7 @@ export const deleteOidcAppTool = {
     try {
       // Look up IDM managed application by name
       const idmQueryUrl =
-        `https://${aicBaseUrl}/openidm/managed/${realm}_application` +
+        `${getIdmBaseUrl()}/managed/${realm}_application` +
         `?_queryFilter=${encodeURIComponent(`name eq "${name}"`)}&_fields=_id,ssoEntities`;
       const { data: queryData } = await makeAuthenticatedRequest(idmQueryUrl, SCOPES, {
         method: 'GET'
@@ -40,7 +41,7 @@ export const deleteOidcAppTool = {
       const deleted: string[] = [];
 
       // Delete IDM managed application
-      const idmDeleteUrl = `https://${aicBaseUrl}/openidm/managed/${realm}_application/${managedApp._id}`;
+      const idmDeleteUrl = `${getIdmBaseUrl()}/managed/${realm}_application/${managedApp._id}`;
       const { response: idmResponse } = await makeAuthenticatedRequest(idmDeleteUrl, SCOPES, { method: 'DELETE' });
       deleted.push(`IDM managed application (${managedApp._id})`);
 

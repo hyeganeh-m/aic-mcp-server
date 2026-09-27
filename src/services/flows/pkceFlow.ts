@@ -84,15 +84,17 @@ function startServerAndGetAuthCode(params: {
           return;
         }
 
-        // Exact hostname match to prevent subdomain attacks
-        if (parsedHostname !== expectedDomain) {
+        // Exact hostname match or local host match
+        const allowedHosts = [expectedDomain, 'am.ping.local', 'localhost', '127.0.0.1'];
+        if (!allowedHosts.includes(parsedHostname) && !parsedHostname.endsWith('.ping.local') && !parsedHostname.endsWith('.forgeblocks.com')) {
           console.error(`Rejected redirect from unexpected origin: ${parsedHostname}`);
-          console.error(`Expected origin: ${expectedDomain}`);
+          console.error(`Expected origin: ${expectedDomain} or local Ping host`);
           res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
           res.end(generateAuthResultPage(false, 'Invalid request origin'));
           cleanup(new Error('Origin validation failed: hostname mismatch'));
           return;
         }
+
       }
       // If no headers present, allow (lenient for privacy-focused browsers)
 

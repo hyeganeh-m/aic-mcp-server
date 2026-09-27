@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/deleteManagedObject.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -28,7 +29,7 @@ export const deleteManagedObjectTool = {
     objectId: safePathSegmentSchema.describe("The object's unique identifier (_id)")
   },
   async toolFunction({ objectType, objectId }: { objectType: string; objectId: string }) {
-    const url = `https://${aicBaseUrl}/openidm/managed/${objectType}/${objectId}`;
+    const url = `${getIdmBaseUrl()}/managed/${objectType}/${objectId}`;
 
     try {
       const { response } = await makeAuthenticatedRequest(url, SCOPES, {

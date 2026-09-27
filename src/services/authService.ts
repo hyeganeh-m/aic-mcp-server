@@ -4,17 +4,17 @@ import { TokenStorage, TokenData, KeychainStorage, FileStorage } from './tokenSt
 import { executePkceFlow as runPkceFlow } from './flows/pkceFlow.js';
 import { executeDeviceFlow as runDeviceFlow } from './flows/deviceFlow.js';
 import { USER_AGENT } from '../utils/version.js';
+import { getAmBaseUrl, getAmOAuth2AuthorizeUrl, getAmOAuth2TokenUrl } from '../utils/urlHelpers.js';
 
 // --- Configuration ---
-const AIC_BASE_URL = process.env.AIC_BASE_URL;
+const getAicBaseUrl = () => process.env.AIC_BASE_URL || 'am.ping.local:8080';
 
 // Fixed OAuth configuration
 const CLIENT_ID = 'AICMCPClient';
 const EXCHANGE_CLIENT_ID = 'AICMCPExchangeClient';
 const REDIRECT_URI_PORT = 3000;
 const REDIRECT_URI = `http://localhost:${REDIRECT_URI_PORT}`;
-const AUTHORIZE_URL = `https://${AIC_BASE_URL}/am/oauth2/authorize`;
-const TOKEN_URL = `https://${AIC_BASE_URL}/am/oauth2/access_token`;
+
 
 /**
  * Clock skew tolerance in milliseconds
@@ -83,9 +83,10 @@ class AuthService {
           if (tokenData) {
             const { accessToken, expiresAt, aicBaseUrl } = tokenData;
 
-            if (aicBaseUrl !== AIC_BASE_URL) {
+            const currentAicBaseUrl = getAicBaseUrl();
+            if (aicBaseUrl !== currentAicBaseUrl) {
               console.error(
-                `Cached token is for different tenant (${aicBaseUrl}), current tenant is ${AIC_BASE_URL}. Re-authenticating...`
+                `Cached token is for different tenant (${aicBaseUrl}), current tenant is ${currentAicBaseUrl}. Re-authenticating...`
               );
             } else if (Date.now() + CLOCK_SKEW_BUFFER_MS < expiresAt) {
               return accessToken;
@@ -124,7 +125,7 @@ class AuthService {
     params.append('scope', requestedScopes.join(' '));
     params.append('client_id', EXCHANGE_CLIENT_ID);
 
-    const response = await fetch(TOKEN_URL, {
+    const response = await fetch(getAmOAuth2TokenUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -198,18 +199,66 @@ class AuthService {
   }
 
   /**
+   * If standalone PingAM credentials (AM_ADMIN_USERNAME / AM_ADMIN_PASSWORD) are set,
+   * acquire an admin SSO session token (iPlanetDirectoryPro).
+   */
+  private async getSsoSessionToken(): Promise<string | null> {
+    if (process.env.SSO_TOKEN) {
+      return process.env.SSO_TOKEN;
+    }
+    if (process.env.AM_ADMIN_USERNAME && process.env.AM_ADMIN_PASSWORD) {
+      try {
+        const amBase = getAmBaseUrl();
+        const res = await fetch(`${amBase}/json/realms/root/authenticate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-OpenAM-Username': process.env.AM_ADMIN_USERNAME,
+            'X-OpenAM-Password': process.env.AM_ADMIN_PASSWORD
+          },
+          body: JSON.stringify({})
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          if (data && data.tokenId) {
+            return data.tokenId;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to authenticate admin session against PingAM:', err);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the appropriate authorization headers for PingAM requests.
+   * Uses SSO session token (iPlanetDirectoryPro) if standalone PingAM admin credentials exist,
+   * otherwise uses the OAuth2 Bearer token (via PKCE and token exchange).
+   */
+  async getAuthHeader(scopes: string[]): Promise<Record<string, string>> {
+    const ssoToken = await this.getSsoSessionToken();
+    if (ssoToken) {
+      return { 'iPlanetDirectoryPro': ssoToken };
+    }
+
+    const token = await this.getToken(scopes);
+    return { 'Authorization': `Bearer ${token}` };
+  }
+
+  /**
    * Executes the OAuth2 PKCE flow to obtain a new access token
    */
   private async executePkceFlow(scopes: string[]): Promise<string> {
     try {
       const { accessToken, expiresIn } = await runPkceFlow({
         scopes,
-        authorizeUrl: AUTHORIZE_URL,
-        tokenUrl: TOKEN_URL,
+        authorizeUrl: getAmOAuth2AuthorizeUrl(),
+        tokenUrl: getAmOAuth2TokenUrl(),
         clientId: CLIENT_ID,
         redirectUri: REDIRECT_URI,
         redirectPort: REDIRECT_URI_PORT,
-        aicBaseUrl: AIC_BASE_URL!,
+        aicBaseUrl: getAicBaseUrl(),
         onServerCreated: (server) => {
           this.redirectServer = server;
         },
@@ -224,7 +273,7 @@ class AuthService {
         const tokenData: TokenData = {
           accessToken,
           expiresAt,
-          aicBaseUrl: AIC_BASE_URL!
+          aicBaseUrl: getAicBaseUrl()
         };
         await this.storage.setToken(tokenData);
       } catch (error) {
@@ -262,8 +311,8 @@ class AuthService {
     const tokenData = await runDeviceFlow({
       scopes,
       clientId: CLIENT_ID,
-      aicBaseUrl: AIC_BASE_URL!,
-      tokenUrl: TOKEN_URL,
+      aicBaseUrl: getAicBaseUrl(),
+      tokenUrl: getAmOAuth2TokenUrl(),
       storage: this.storage,
       mcpServer: this.mcpServer,
       verifierState
@@ -308,7 +357,7 @@ export function initAuthService(allScopes: string[], config: AuthServiceConfig =
  */
 export function getAuthService(): AuthService {
   if (!instance) {
-    throw new Error('AuthService not initialized. Call initAuthService first.');
+    instance = new AuthService([]);
   }
   return instance;
 }

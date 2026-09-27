@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
@@ -29,7 +30,7 @@ export const listOidcAppsTool = {
       const filter = queryFilter || 'true';
       const fields = 'name,ssoEntities,templateName,authoritative,_id';
       const url =
-        `https://${aicBaseUrl}/openidm/managed/${realm}_application` +
+        `${getIdmBaseUrl()}/managed/${realm}_application` +
         `?_queryFilter=${encodeURIComponent(filter)}&_fields=${fields}`;
 
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES, {

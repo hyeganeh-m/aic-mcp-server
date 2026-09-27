@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { REALMS } from '../../utils/validationHelpers.js';
@@ -23,7 +24,7 @@ export const getOidcAppTool = {
     try {
       // Look up IDM managed application by name
       const idmQueryUrl =
-        `https://${aicBaseUrl}/openidm/managed/${realm}_application` +
+        `${getIdmBaseUrl()}/managed/${realm}_application` +
         `?_queryFilter=${encodeURIComponent(`name eq "${name}"`)}&_fields=*`;
       const { data: idmQueryData, response: idmResponse } = await makeAuthenticatedRequest(idmQueryUrl, SCOPES, {
         method: 'GET'

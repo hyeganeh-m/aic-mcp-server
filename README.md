@@ -1,525 +1,312 @@
-# PingOne Advanced Identity Cloud MCP Server
+# Ping Platform MCP Server
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/pingidentity/aic-mcp-server?include_prereleases&sort=semver)](https://github.com/pingidentity/aic-mcp-server/releases)
-[![npm version](https://img.shields.io/npm/v/@ping-identity/aic-mcp-server.svg)](https://www.npmjs.com/package/@ping-identity/aic-mcp-server)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
+A universal **Model Context Protocol (MCP)** server that connects AI assistants and autonomous coding agents (**Antigravity**, **Gemini CLI (`agy`)**, **GitHub Copilot**, **Claude Desktop**, **Cursor**) directly to **Ping Identity platforms** — supporting **PingAM**, **PingIDM**, and **PingOne Advanced Identity Cloud (AIC)**.
+
+Administer identity trees, author authentication journeys, manage users and roles, customize themes, inspect audit logs, and configure environment variables using natural language across **local Docker**, **on-premises enterprise servers**, or **cloud tenants**.
+
 ---
 
-**[Features](#features)** • **[Use Cases](#use-cases)** • **[Prerequisites](#prerequisites)** • **[Getting Started](#getting-started)** • **[Authentication](#authentication)** • **[Available Tools](#available-tools)** • **[Agent Skills](#agent-skills)** • **[Docker Deployment](#docker-deployment)** • **[Security](#security)** • **[Monitoring & Audit](#monitoring--audit)** • **[Troubleshooting](#troubleshooting)** • **[Development](#development)** • **[License](#license)**
+## 🌟 Key Capabilities
+
+- **Universal Ping Connectivity**:
+  - **Local & On-Premises**: Connects directly to PingAM and PingIDM (e.g. `http://am.ping.local:8080/am`, `http://localhost:8082/openidm`) across custom realms (`customers`, `employees`, `root`).
+  - **PingOne Advanced Identity Cloud (AIC)**: Seamlessly targets cloud tenants (`https://<tenant>.forgeblocks.com`) using cloud gateway authentication.
+- **Multiple Authentication Modes**:
+  - **Direct Admin Credentials / Automation Mode**: Pass `AM_ADMIN_USERNAME`/`AM_ADMIN_PASSWORD` and `IDM_ADMIN_USERNAME`/`IDM_ADMIN_PASSWORD` (or `SSO_TOKEN`) for zero-prompt, headless agent operation.
+  - **Interactive OAuth 2.0 PKCE Flow**: Automatic loopback listener (`localhost:3000`) and browser elicitation for desktop operators.
+  - **OAuth 2.0 Device Code Flow**: RFC 8628 with interactive MCP input elicitation for containerized/headless deployments.
+  - **RFC 8693 Token Exchange**: Automatically down-scopes broad session tokens to least-privilege tokens per tool call.
+- **Comprehensive Tool Surface (40+ Tools)**:
+  - **Authentication Trees / Journeys**: Create, query, update, node wiring, and decommission journeys.
+  - **Scripts & Decision Nodes**: Manage Groovy and JavaScript authentication and policy scripts.
+  - **IDM Managed Objects**: Full CRUD, search, filtering, and schema introspection for users, roles, groups, organizations, and custom objects.
+  - **OIDC / OAuth 2.0 Clients**: Inspect and configure applications, grant types, and redirect URIs.
+  - **Themes & UI Branding**: Query, create, and set default themes.
+  - **Audit & Monitoring**: Query audit logs and inspect event sources.
+  - **Environment Variables (ESVs)**: Read and update secrets and variables.
 
 ---
 
-> [!CAUTION]
-> **Security Notice**
->
-> Depending on the requests made to the MCP server, tenant configuration or data may be returned. Do not use the MCP server with untrusted MCP clients, agent code or LLM inference.
+## 🚀 Quick Start & Client Installation
 
-> [!WARNING]
-> **Review Generated Configuration**
->
-> Configuration can be generated dynamically using LLM and user feedback represented dynamically back to agents/conversations. Be sure to review generated configuration before promoting to production environments, or those serving live identity/access requests.
-
-An MCP (Model Context Protocol) server that enables AI assistants to interact with PingOne Advanced Identity Cloud environments. Manage users, roles, groups, organizations, customize authentication themes, analyze logs, and query identity data directly from your AI conversations.
-
-Ask questions like "Find all alpha_users with email starting with john@example.com", "Create a new theme called 'Corporate Brand' with primary color #0066cc", or "Show me all ERROR level logs from the am-authentication source in the last hour".
-
-## Features
-
-- **Administer your AIC environment using natural language** - Interact with PingOne AIC from whichever AI tool you use daily. No need to switch to the admin console or write API scripts - just ask your AI assistant.
-
-- **Secure authentication** - Supports OAuth 2.0 PKCE flow for local deployment and Device Code Flow for containerized deployment. All actions are user-based and auditable. Tokens stored securely in OS keychain (local) or ephemerally (Docker).
-
-- **Broad tool support** - Supports full CRUD operations against any managed object type in your environment (users, roles, groups, organizations, and custom types), authentication journey and script management, theme customization, advanced log querying, and environment variable configuration.
-
-## Use Cases
-
-- **Journey Management** - "Show me the Login journey", "Create a new MFA journey", "Add a scripted decision node to the registration flow", "Set Login as the default journey"
-- **Authentication Customization** - "Create a branded theme with our corporate colors", "Show me all themes in production", "Set the new theme as default"
-- **Audit & Monitoring** - "Show me failed login attempts in the last hour", "Find all logs for transaction abc-123", "What log sources are available?"
-- **Identity Operations** - "Find all users with admin in their username", "Create a new developer role", "Update the email for user xyz123"
-- **Configuration Management** - "List all environment variables", "Create a new API key variable", "Update the database connection string"
-
-## Getting Started
-
-### Prerequisites
-
-- **Node.js 18+**
-- **PingOne Advanced Identity Cloud [Sandbox or Development](https://docs.pingidentity.com/pingoneaic/latest/tenants/environments.html) Tenant**
-- **MCP-compatible client** (Claude Code, Claude Desktop, Cursor, VS Code with GitHub Copilot, Gemini CLI, Codex, etc.)
-
-### Configure Your MCP Client
-
-The MCP server requires the `AIC_BASE_URL` environment variable to be set to your PingOne AIC hostname.
-
-Add this to your MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "aic-mcp-server": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@ping-identity/aic-mcp-server"],
-      "env": {
-        "AIC_BASE_URL": "your-tenant.forgeblocks.com"
-      }
-    }
-  }
-}
-```
-
-**Required:** Replace `your-tenant.forgeblocks.com` with your PingOne AIC tenant URL.
-
-**Client-specific instructions:**
-
-<details>
-<summary><b>Claude Code or Claude Desktop</b></summary>
-
-Add this to your Claude MCP configuration (`claude.json` for Claude Code or `claude_desktop_config.json` for Claude Desktop):
-
-```json
-{
-  "mcpServers": {
-    "aic-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@ping-identity/aic-mcp-server"],
-      "env": {
-        "AIC_BASE_URL": "your-tenant.forgeblocks.com"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Cursor</b></summary>
-
-[![Install MCP Server with One-Click](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en-US/install-mcp?name=pingone-aic&config=eyJlbnYiOnsiQUlDX0JBU0VfVVJMIjoieW91ci10ZW5hbnQuZm9yZ2VibG9ja3MuY29tIn0sImNvbW1hbmQiOiJucHggLXkgQHBpbmctaWRlbnRpdHkvYWljLW1jcC1zZXJ2ZXIifQ%3D%3D)
-
-Add this to your Cursor MCP configuration (`.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "aic-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@ping-identity/aic-mcp-server"],
-      "env": {
-        "AIC_BASE_URL": "your-tenant.forgeblocks.com"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>GitHub Copilot (VS Code)</b></summary>
-
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=aic-mcp-server&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22pingone_aic_base_url%22%2C%22description%22%3A%22The%20base%20URL%20of%20the%20AIC%20tenant%22%2C%22password%22%3Afalse%7D%5D&config=%7B%22command%22%3A%22npx%22%2C%22env%22%3A%7B%22AIC_BASE_URL%22%3A%22%24%7Binput%3Apingone_aic_base_url%7D%22%7D%2C%22args%22%3A%5B%22%40ping-identity%2Faic-mcp-server%22%5D%2C%22type%22%3A%22stdio%22%7D) [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_Server-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=aic-mcp-server&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22pingone_aic_base_url%22%2C%22description%22%3A%22The%20base%20URL%20of%20the%20AIC%20tenant%22%2C%22password%22%3Afalse%7D%5D&config=%7B%22command%22%3A%22npx%22%2C%22env%22%3A%7B%22AIC_BASE_URL%22%3A%22%24%7Binput%3Apingone_aic_base_url%7D%22%7D%2C%22args%22%3A%5B%22%40ping-identity%2Faic-mcp-server%22%5D%2C%22type%22%3A%22stdio%22%7D&quality=insiders)
-
-Add this to your Copilot MCP configuration (`mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "aic-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@ping-identity/aic-mcp-server"],
-      "env": {
-        "AIC_BASE_URL": "your-tenant.forgeblocks.com"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Gemini CLI</b></summary>
-
-Add this to your Gemini CLI MCP configuration (`settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "aic-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@ping-identity/aic-mcp-server"],
-      "env": {
-        "AIC_BASE_URL": "your-tenant.forgeblocks.com"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Codex (OpenAI)</b></summary>
-
-Add this to your Codex MCP configuration (`~/.codex/config.toml`):
-
-```toml
-[mcp_servers.aic-mcp-server]
-command = "npx"
-args = ["-y", "@ping-identity/aic-mcp-server"]
-env = {"AIC_BASE_URL" = "your-tenant.forgeblocks.com"}
-```
-
-</details>
-
-Restart your MCP client and start asking questions! Your browser will open for authentication when you use the first tool in a session.
-
-## Authentication
-
-The server uses **OAuth 2.0 PKCE flow** for secure user authentication:
-
-1. **First Tool Use** - Browser opens automatically for user login at PingOne AIC when you use a tool for the first time in a session
-2. **Token Storage** - Access tokens stored securely in OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
-3. **Automatic Reuse** - Cached tokens used for subsequent tool calls within the same session
-4. **Auto Re-authentication** - When tokens expire during a session, browser opens again for new login
-
-**Docker Deployment**: Uses OAuth 2.0 Device Code Flow with ephemeral token storage (tokens deleted on container restart).
-
-**Security Features**:
-
-- User-based actions provide complete audit trail
-- All actions traceable to authenticated users for compliance
-
-> [!CAUTION]
-> **Administrator Access Required**: This server requires administrative authentication and provides administrative capabilities to your PingOne AIC development and sandbox environments. All operations are performed as the authenticated administrator and are fully auditable.
->
-> **Development and Sandbox Environments Only**: This server can only be used with development and sandbox environments. Use with trusted AI assistants in secure contexts. AI-driven operations can make mistakes - review and test changes carefully before promoting to higher environments.
-
-## Available Tools
-
-The server provides tools for AI agents to interact with your PingOne AIC environment:
-
-### Managed Objects
-
-Generic CRUD operations for **any managed object type** in your environment, plus administrative tools for managing object type definitions and relationship properties.
-
-| Tool                             | Description                                                                        | Usage Examples                                                                                                                                                 |
-| -------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listManagedObjects`             | Discover all managed object types in your environment                              | - `What object types are available?` <br> - `List all managed objects` <br> - `Show me what types I can work with`                                             |
-| `getManagedObjectSchema`         | Get schema definition for an object type                                           | - `What fields are required for alpha_user?` <br> - `Show me the schema for bravo_role` <br> - `What properties does alpha_group have?`                        |
-| `queryManagedObjects`            | Query objects with filters, pagination, sorting                                    | - `Find users with email @example.com` <br> - `List all roles sorted by name` <br> - `Show me the first 10 alpha_groups`                                       |
-| `getManagedObject`               | Retrieve an object's complete profile                                              | - `Get user xyz123` <br> - `Show me the details for role abc456` <br> - `Display the profile for alpha_user xyz`                                               |
-| `createManagedObject`            | Create a new managed object                                                        | - `Create user jsmith` <br> - `Add a new admin role` <br> - `Create a bravo_group called Developers`                                                           |
-| `patchManagedObject`             | Update object fields                                                               | - `Update user xyz123 email to new@example.com` <br> - `Change role description` <br> - `Modify the alpha_group name`                                          |
-| `deleteManagedObject`            | Delete an object                                                                   | - `Delete user xyz123` <br> - `Remove role abc456` <br> - `Delete the test group`                                                                              |
-| `createManagedObjectDefinition`  | Create a new managed object type definition                                        | - `Create a new alpha_device object type` <br> - `Add a custom_application managed object` <br> - `Define a new managed object type for vehicles`              |
-| `patchManagedObjectDefinition`   | Modify an existing managed object type definition using ForgeRock PATCH operations | - `Add an email property to alpha_user` <br> - `Remove the unused field from custom_application` <br> - `Update the description on the alpha_device schema`    |
-| `deleteManagedObjectDefinition`  | Delete a managed object type definition from the managed config                    | - `Delete the custom_application object type` <br> - `Remove the alpha_device managed object` <br> - `Drop the unused custom object type`                      |
-| `patchManagedObjectRelationship` | Add, update, or remove a custom relationship property (must use `custom_` prefix)  | - `Add a custom_manager relationship to alpha_user` <br> - `Update the custom_teams relationship definition` <br> - `Remove custom_department from bravo_user` |
-
-### Themes
-
-Customize login and account page appearance.
-
-| Tool              | Description                             | Usage Examples                                                                                                                          |
-| ----------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `getThemeSchema`  | Get complete theme schema documentation | - `Show me available theme customizations` <br> - `What fields can I set on a theme?` <br> - `Display the theme configuration options`  |
-| `getThemes`       | List all themes in a realm              | - `Show themes in alpha realm` <br> - `List all available themes` <br> - `What themes exist in bravo?`                                  |
-| `getTheme`        | Get a theme's complete configuration    | - `Get the Corporate Brand theme` <br> - `Show me theme xyz123` <br> - `Display the Dark Mode theme settings`                           |
-| `createTheme`     | Create a new theme                      | - `Create theme called Dark Mode` <br> - `Add new theme with blue color scheme` <br> - `Create a Corporate Brand theme with our colors` |
-| `updateTheme`     | Update theme properties                 | - `Change Corporate Brand logo` <br> - `Update theme colors` <br> - `Modify the Dark Mode background color`                             |
-| `deleteTheme`     | Delete a theme                          | - `Delete Test Theme` <br> - `Remove theme xyz123` <br> - `Delete the old branding theme`                                               |
-| `setDefaultTheme` | Set a theme as the realm default        | - `Set Corporate Brand as default` <br> - `Make Dark Mode the default theme` <br> - `Use the new theme as default for alpha`            |
-
-### Logging
-
-Query and analyze authentication and activity logs.
-
-| Tool            | Description                                             | Usage Examples                                                                                                           |
-| --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `getLogSources` | List available log sources                              | - `What log sources are available?` <br> - `Show me all log types` <br> - `Display available logging sources`            |
-| `queryLogs`     | Query logs with time range, source, and content filters | - `Show ERROR logs from last 2 hours` <br> - `Find login failures for user jsmith` <br> - `Get logs for transaction xyz` |
-
-### ESVs (Environment Secrets and Variables)
-
-Manage environment secrets and variables.
-
-| Tool             | Description                              | Usage Examples                                                                                                                    |
-| ---------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `queryESVs`      | Query variables or secrets by ID pattern | - `List all environment variables` <br> - `Find variables starting with esv-prod` <br> - `Show me all secrets in the environment` |
-| `getVariable`    | Retrieve a variable with decoded value   | - `Get esv-database-url` <br> - `Show me the API key variable` <br> - `Display the value of esv-config`                           |
-| `setVariable`    | Create or update a variable              | - `Create variable esv-api-key` <br> - `Update esv-max-connections to 100` <br> - `Set esv-endpoint to https://api.example.com`   |
-| `deleteVariable` | Delete a variable                        | - `Delete esv-old-config` <br> - `Remove variable xyz` <br> - `Delete the deprecated esv-legacy-url`                              |
-
-### Feature Management
-
-Inspect and enable optional features in PingOne AIC. A single `listFeatures` tool returns a unified view of all IDM and AIC platform features with install status. Install operations are one-way and cannot be undone from these tools.
-
-| Tool                 | Description                                                                         | Usage Examples                                                                                            |
-| -------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `listFeatures`       | List all features (IDM + AIC platform) and their install status                     | - `What features are available?` <br> - `Which features are installed?` <br> - `Is AI Agents installed?`  |
-| `validateIdmFeature` | Check whether an IDM feature can be installed without making any changes            | - `Can I install the groups feature?` <br> - `Validate the password/timestamps feature before installing` |
-| `installIdmFeature`  | Install an IDM feature (one-way — cannot be undone). Run `validateIdmFeature` first | - `Install the groups feature` <br> - `Install password/timestamps`                                       |
-| `enableAiAgent`      | Enable AI Agents (one-way — cannot be undone). Re-running is safe                   | - `Enable AI Agents` <br> - `Set up AI Agents in this tenant`                                             |
-
-### Applications (Not available when using Docker)
-
-> **📍 Not available when using MCP from a Docker container **: Application tools are automatically excluded in Docker deployments because they require browser-based PKCE authentication which is incompatible with the Device Code Flow used in containers.
-
-Manage OIDC applications in a realm.
-
-| Tool               | Description                                                                                        | Usage Examples                                                                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `getOidcAppSchema` | Get the OIDC app schema (compact summary by default, full detail with section filtering available) | - `What fields can I set on an OIDC app?` <br> - `Show me the OIDC application schema` <br> - `Show the full schema for coreOAuth2ClientConfig` |
-| `listOidcApps`     | List OIDC applications in a realm with summary fields                                              | - `Show all OIDC apps in alpha` <br> - `List applications in bravo` <br> - `What OIDC apps exist?`                                              |
-| `getOidcApp`       | Retrieve a complete OIDC application configuration                                                 | - `Get the MyPortal OIDC app` <br> - `Show me the configuration for app xyz` <br> - `Display the full config for the Checkout application`      |
-| `createOidcApp`    | Create a new OIDC application                                                                      | - `Create an OIDC app called MyPortal` <br> - `Add a new OIDC application for Checkout` <br> - `Create an OIDC client with client ID my-spa`    |
-| `updateOidcApp`    | Update an OIDC application (partial updates — send only changed fields)                            | - `Update the redirect URIs on MyPortal` <br> - `Change the owners of the Checkout app` <br> - `Update the token lifetime for the SPA app`      |
-| `deleteOidcApp`    | Delete an OIDC application                                                                         | - `Delete the MyPortal app` <br> - `Remove the old Checkout application` <br> - `Delete OIDC app xyz`                                           |
-
-### AM Journeys (Not available when using Docker)
-
-> **📍 Not available when using MCP from a Docker container **: AM Journey tools are automatically excluded in Docker deployments because they require browser-based PKCE authentication which is incompatible with the Device Code Flow used in containers.
-
-Manage authentication journeys, node types, and scripts.
-
-| Tool                              | Description                                                          | Usage Examples                                                                                                                                              |
-| --------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listJourneys`                    | List all authentication journeys in a realm                          | - `Show all journeys in alpha` <br> - `List authentication trees for bravo` <br> - `What journeys exist?`                                                   |
-| `getJourney`                      | Get journey with node schemas and configs **automatically included** | - `Show me the Login journey` <br> - `Get the Registration journey with all node details` <br> - `Display the PasswordReset journey configuration`          |
-| `createJourney`                   | Create or replace an authentication journey atomically (upsert)      | - `Create a new login journey` <br> - `Build a journey with these nodes` <br> - `Create a journey named Registration`                                       |
-| `updateJourney`                   | Update an existing journey's metadata and/or replace its node graph  | - `Update the description on the Login journey` <br> - `Enable the Registration journey` <br> - `Replace the node graph for the PasswordReset journey`      |
-| `deleteJourney`                   | Delete a journey and its associated nodes                            | - `Delete the Test journey` <br> - `Remove the old login flow` <br> - `Delete journey OldRegistration`                                                      |
-| `setDefaultJourney`               | Set the default authentication journey for a realm                   | - `Set Login as the default journey` <br> - `Make Registration the default for alpha` <br> - `Change the default authentication journey`                    |
-| `getJourneyPreviewUrl`            | Generate a preview URL to test a journey in a browser                | - `Get the preview URL for Login` <br> - `How can I test the Registration journey?` <br> - `Give me a link to try the PasswordReset flow`                   |
-| `listNodeTypes`                   | Discover all available authentication node types                     | - `What node types are available?` <br> - `List all authentication node types` <br> - `Show me the available nodes for building journeys`                   |
-| `getNodeTypeDetails`              | Get schema, template, and outcomes for node types                    | - `Show me the PageNode schema` <br> - `What config does ScriptedDecisionNode need?` <br> - `Get details for UsernameCollectorNode`                         |
-| `getDynamicNodeOutcomes`          | Calculate outcomes for a node based on its configuration             | - `What outcomes does this PageNode produce?` <br> - `Get the outcomes for a ChoiceCollectorNode with these choices` <br> - `List outcomes for this config` |
-| `updateJourneyNode`               | Update a single node's configuration                                 | - `Update the config for node xyz` <br> - `Change the script on this ScriptedDecisionNode` <br> - `Modify the PageNode configuration`                       |
-| `deleteJourneyNodes`              | Batch delete orphaned node instances                                 | - `Clean up orphaned nodes from the last update` <br> - `Delete these unused node instances` <br> - `Remove leftover nodes`                                 |
-| `listScripts`                     | List Scripted Decision Node scripts in a realm                       | - `Show all scripts in alpha` <br> - `List decision node scripts` <br> - `What scripts are available?`                                                      |
-| `getAMScript`                     | Get AM script with automatic base64 decoding                         | - `Show me script 01e1a3c0-038b-4c16-956a-6c9d89328cff` <br> - `Get the decision node script` <br> - `Display the authentication script code`               |
-| `createScript`                    | Create a new Scripted Decision Node script                           | - `Create a script that checks user attributes` <br> - `Add a new decision script` <br> - `Write a script for conditional authentication`                   |
-| `updateScript`                    | Update an existing script's name, description, or content            | - `Update the login script code` <br> - `Rename script xyz` <br> - `Change the description on this script`                                                  |
-| `deleteScript`                    | Delete an AM script                                                  | - `Delete script xyz` <br> - `Remove the old decision script` <br> - `Delete the unused test script`                                                        |
-| `getScriptedDecisionNodeBindings` | Get available bindings and allowed imports for scripting             | - `What variables are available in scripts?` <br> - `Show me the scripting API` <br> - `What can I import in decision scripts?`                             |
-
-**Key Feature**: The `getJourney` tool **automatically fetches and includes** all node schemas and configurations in parallel, so you get complete journey details in a single call - no need to manually fetch node information.
-
-## Agent Skills
-
-This repository ships agent skills that extend your AI assistant's ability to work with the AIC MCP server. Once installed, your agent can take on operational tasks — like auditing MCP usage in your environment — without needing explicit instructions.
-
-| Skill                                                      | What it does                                                                                             | Try it                                                |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| [`monitor-usage`](./.claude/skills/monitor-usage/SKILL.md) | Audits MCP server activity in AIC logs — authentication events, user-attributed actions, and API traffic | _"Show me what's been done via the MCP server today"_ |
-
-### Install the Skills
-
-**Option 1 — Skills CLI** (works with any supported agent):
+### 1. Build from Source
 
 ```bash
-npx skills add pingidentity/aic-mcp-server
-```
-
-**Option 2 — Manual installation**:
-
-Clone the repository and copy the skills from `.claude/skills/` to your agent's skills directory. See your agent's documentation for the correct location:
-
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills)
-- [VS Code / GitHub Copilot](https://code.visualstudio.com/docs/copilot/customization/agent-skills)
-- [Gemini CLI](https://geminicli.com/docs/cli/skills/)
-- [Codex](https://developers.openai.com/codex/skills/)
-- [Goose](https://block.github.io/goose/docs/guides/context-engineering/using-skills/)
-
-Once installed, verify by asking your agent _"What skills do you have?"_ — you should see `monitor-usage` in the list.
-
-## Docker Deployment
-
-> **⚠️ EXPERIMENTAL**: Docker deployment uses OAuth 2.0 Device Code Flow with MCP form elicitation. This requires MCP client support for form elicitation, which is currently limited. If your client doesn't support it, use the local deployment method above.
-
-### Build Image
-
-```bash
-npm run docker:build
-```
-
-### Configure Your MCP Client
-
-#### Claude Code or Claude Desktop
-
-Add this to your Claude MCP configuration (`claude.json` for Claude Code or `claude_desktop_config.json` for Claude Desktop):
-
-```json
-{
-  "mcpServers": {
-    "aic-mcp-server": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "-e",
-        "AIC_BASE_URL=your-tenant.forgeblocks.com",
-        "pingidentity/aic-mcp-server:latest"
-      ]
-    }
-  }
-}
-```
-
-**Authentication**: When authentication is required, your MCP client should display a URL. Click it to authenticate in your browser, then accept the prompt in your client.
-
-**Token Storage**: Tokens are stored ephemerally in the container filesystem (`/app/tokens/token.json`) and deleted on container restart for enhanced security.
-
-## Security
-
-The PingOne AIC MCP Server implements multiple security layers:
-
-- **Secure credential storage** - Tokens stored in OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service) for local deployment, or ephemerally in container filesystem for Docker
-- **No plain text secrets** - No sensitive information stored in configuration files
-- **OAuth 2.0 authentication** - PKCE flow for local deployment prevents authorization code interception; Device Code flow for containerized deployment
-- **User-based authentication** - All API calls are authenticated as the user who logged in, providing complete audit trails
-- **Input validation** - Built-in protections against path traversal and query injection attacks
-- **Tenant isolation** - Tokens are validated against the configured `AIC_BASE_URL` to prevent accidental cross-tenant operations
-
-## Monitoring & Audit
-
-All operations performed through the MCP server are executed as the authenticated user — there are no anonymous or service-account-attributed actions. Every tool invocation produces a full audit trail in the AIC audit logs, attributable to the individual who authenticated the session.
-
-### Authentication events
-
-The server authenticates using two registered OAuth 2.0 clients:
-
-- **`AICMCPClient`** — used for the initial user login (PKCE or Device Code flow)
-- **`AICMCPExchangeClient`** — used to obtain scoped tokens for each tool call via RFC 8693 token exchange
-
-Filtering the `am-authentication` log source for either of these client IDs will surface all MCP authentication activity. Each token exchange references the original user login, providing a complete chain from the tool call back to the authenticated identity.
-
-### Attributing actions to a user
-
-All API calls made by the server carry the scoped token issued to the authenticated user. Configuration changes (journeys, scripts, OIDC apps) appear in AM audit logs and identity operations (managed objects, groups, relationships) appear in IDM audit logs — all attributed to the user identity, not a service account.
-
-### Identifying MCP traffic
-
-All requests from the server include a `User-Agent` header of the form `aic-mcp-server/<version>`. This can be used to filter access logs and isolate MCP-originated traffic from browser sessions, automated reconciliation jobs, and other API clients.
-
-<details>
-<summary><h2>Troubleshooting</h2></summary>
-
-### "FATAL: AIC_BASE_URL environment variable is not set"
-
-Set the `AIC_BASE_URL` environment variable in your MCP client configuration to your PingOne AIC tenant URL (e.g., `your-tenant.forgeblocks.com` or `https://your-tenant.forgeblocks.com`).
-
-### "Port 3000 is already in use"
-
-Another service is using port 3000 (required for OAuth redirect). Stop that service and try again.
-
-### "Browser doesn't open during authentication"
-
-Check that the `open` package has permissions to launch your browser, or manually navigate to the URL shown in the error message.
-
-### Docker: "URL not displayed during authentication"
-
-Your MCP client may not support form elicitation yet. Use the local deployment method instead.
-
-</details>
-
-## Development
-
-<details>
-<summary><h3>Building from Source</h3></summary>
-
-To build the server from source for development:
-
-```bash
-# Clone the repository
-git clone https://github.com/pingidentity/aic-mcp-server.git
+git clone https://github.com/hyeganeh-m/aic-mcp-server.git
 cd aic-mcp-server
-
-# Install dependencies
 npm install
-
-# Compile TypeScript
 npm run build
 ```
 
-Then configure your MCP client to use the local build:
+#### Directory Structure & Locating the Entrypoint
+
+After compilation, the MCP entrypoint is generated at `dist/index.js`:
+
+```text
+aic-mcp-server/
+├── dist/
+│   ├── index.js          <-- ⭐️ Absolute path to this file is used in MCP client configs
+│   └── ...
+├── src/
+├── package.json
+└── README.md
+```
+
+> 💡 **Find Your System's Absolute Path**:
+> Run this command inside the cloned repository to print the exact path for your system:
+> ```bash
+> echo "$(pwd)/dist/index.js"
+> # macOS example:   /Users/<your-username>/projects/aic-mcp-server/dist/index.js
+> # Linux example:   /home/<your-username>/projects/aic-mcp-server/dist/index.js
+> # Windows example: C:\\projects\\aic-mcp-server\\dist\\index.js
+> ```
+
+---
+
+### 2. Configure for Your AI Tool
+
+#### A. Gemini CLI / Antigravity CLI (`agy`)
+Antigravity and `agy` discover global MCP servers from `~/.gemini/config/mcp_config.json`. Add the server to the `mcpServers` object:
 
 ```json
 {
   "mcpServers": {
-    "aic-mcp-server": {
+    "ping-platform": {
       "command": "node",
-      "args": ["/absolute/path/to/aic-mcp-server/dist/index.js"],
+      "args": [
+        "/path/to/aic-mcp-server/dist/index.js"
+      ],
       "env": {
-        "AIC_BASE_URL": "your-tenant.forgeblocks.com"
+        "AM_BASE_URL": "http://am.ping.local:8080/am",
+        "IDM_BASE_URL": "http://localhost:8082/openidm",
+        "AM_REALM": "customers",
+        "AM_ADMIN_USERNAME": "amadmin",
+        "AM_ADMIN_PASSWORD": "<your-am-admin-password>",
+        "IDM_ADMIN_USERNAME": "openidm-admin",
+        "IDM_ADMIN_PASSWORD": "<your-idm-admin-password>"
       }
     }
   }
 }
 ```
 
-For type checking without building:
-
+**Test with `agy`:**
 ```bash
-npm run typecheck
+agy "Use ping-platform MCP to list all journeys in the customers realm"
 ```
 
-</details>
+---
 
-<details>
-<summary><h3>Testing</h3></summary>
+#### B. GitHub Copilot (VS Code Extension / Plugin)
+VS Code supports Model Context Protocol (MCP) servers for GitHub Copilot Chat through `.vscode/mcp.json` (workspace scope) or user-level settings.
 
-The project includes a comprehensive test suite covering all tools and authentication flows.
+Create or update `.vscode/mcp.json` in your repository root:
+
+```json
+{
+  "mcpServers": {
+    "ping-platform": {
+      "command": "node",
+      "args": [
+        "/path/to/aic-mcp-server/dist/index.js"
+      ],
+      "env": {
+        "AM_BASE_URL": "http://am.ping.local:8080/am",
+        "IDM_BASE_URL": "http://localhost:8082/openidm",
+        "AM_REALM": "customers",
+        "AM_ADMIN_USERNAME": "amadmin",
+        "AM_ADMIN_PASSWORD": "<your-am-admin-password>",
+        "IDM_ADMIN_USERNAME": "openidm-admin",
+        "IDM_ADMIN_PASSWORD": "<your-idm-admin-password>"
+      }
+    }
+  }
+}
+```
+
+**Test in GitHub Copilot Chat:**
+Open the Copilot Chat panel in VS Code (`Cmd + Shift + I` or `Ctrl + Shift + I`) and prompt:
+> *"@workspace Use the ping-platform tool to list all authentication journeys in the customers realm."*
+
+---
+
+#### C. Claude Desktop
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "ping-platform": {
+      "command": "node",
+      "args": [
+        "/path/to/aic-mcp-server/dist/index.js"
+      ],
+      "env": {
+        "AM_BASE_URL": "http://am.ping.local:8080/am",
+        "IDM_BASE_URL": "http://localhost:8082/openidm",
+        "AM_REALM": "customers",
+        "AM_ADMIN_USERNAME": "amadmin",
+        "AM_ADMIN_PASSWORD": "<your-am-admin-password>",
+        "IDM_ADMIN_USERNAME": "openidm-admin",
+        "IDM_ADMIN_PASSWORD": "<your-idm-admin-password>"
+      }
+    }
+  }
+}
+```
+
+---
+
+#### D. Cursor IDE
+Add to `.cursor/mcp.json` or open **Cursor Settings > Features > MCP**:
+- **Name**: `ping-platform`
+- **Type**: `command`
+- **Command**: `node /path/to/aic-mcp-server/dist/index.js`
+- Set the environment variables in the configuration modal.
+
+---
+
+## 🔐 Security & Password Management
+
+Never commit administrative passwords to public repositories or unencrypted configuration files. Use one of the following recommended methods:
+
+### Option 1: Zero-Credentials Interactive Flow (Recommended)
+You do not need to store admin usernames or passwords in configuration files! 
+If `AM_ADMIN_PASSWORD` is omitted, the MCP server automatically initiates an interactive **OAuth 2.0 Authorization Code Flow with PKCE**:
+1. Starts a local loopback listener on `http://localhost:3000`.
+2. Prompts you in your default web browser to log in through your realm's authentication journey.
+3. Upon successful login, the session token is securely stored in your operating system's native keychain (macOS Keychain, Windows Credential Manager, or Linux Secret Service / Keyring).
+4. No plaintext passwords are ever written to configuration files.
+
+### Option 2: Environment Variable Expansion & Secrets Injection
+Keep credentials out of static `.json` configuration files by injecting environment variables:
 
 ```bash
-# Run all tests
+export AM_ADMIN_PASSWORD="<your-strong-password>"
+export IDM_ADMIN_PASSWORD="<your-strong-password>"
+```
+
+In tools that support environment variable expansion, reference them directly:
+```json
+{
+  "env": {
+    "AM_ADMIN_PASSWORD": "${AM_ADMIN_PASSWORD}",
+    "IDM_ADMIN_PASSWORD": "${IDM_ADMIN_PASSWORD}"
+  }
+}
+```
+
+Or inject at runtime via enterprise secret tools (e.g. 1Password CLI, Doppler, Vault):
+```bash
+op run --env-file=.env -- agy "List journeys"
+```
+
+### Option 3: Generating Cryptographically Strong Passwords
+When provisioning administrator accounts for PingAM (`amadmin`) or PingIDM (`openidm-admin`), generate random, high-entropy passwords rather than using static strings:
+
+- **OpenSSL (Cross-Platform)**:
+  ```bash
+  openssl rand -base64 24
+  ```
+- **Python 3 `secrets` module**:
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(24))"
+  ```
+- **pwgen**:
+  ```bash
+  pwgen -s 24 1
+  ```
+- **System Entropy (`/dev/urandom`)**:
+  ```bash
+  LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 24; echo
+  ```
+
+---
+
+## ⚙️ Alternative Connection Modes
+
+### Cloud Mode: PingOne Advanced Identity Cloud (AIC)
+If targeting a cloud tenant instead of a local/on-prem stack, set `AIC_BASE_URL`:
+
+```json
+{
+  "mcpServers": {
+    "ping-platform": {
+      "command": "node",
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
+      "env": {
+        "AIC_BASE_URL": "openam-mytenant.forgeblocks.com"
+      }
+    }
+  }
+}
+```
+
+### Interactive Browser PKCE Mode
+If admin credentials are not provided, the MCP server automatically launches your local browser on `http://localhost:3000` to authenticate interactively via PingAM's login journey.
+
+---
+
+## 🛠️ Available MCP Tools
+
+### Authentication Journeys & Trees
+- `listJourneys`: Discovers all authentication trees in a realm.
+- `getJourney`: Retrieves full node configuration, layout, and connections.
+- `createJourney`: Creates a new authentication journey with node layout.
+- `updateJourney`: Modifies journey structures and entry points.
+- `deleteJourney`: Deletes an authentication journey and cleans up orphaned nodes.
+- `setDefaultJourney`: Configures a realm's default login journey.
+- `getJourneyPreviewUrl`: Generates direct testing URLs for end users.
+
+### Scripts & Policy
+- `listScripts`: Lists all groovy/javascript scripts.
+- `getAMScript`: Fetches script content and metadata.
+- `createScript`: Creates a new script in a target realm.
+- `updateScript`: Updates script source code and evaluation engine context.
+- `deleteScript`: Removes a script.
+
+### IDM Managed Objects (Users, Roles, Custom Schemas)
+- `listManagedObjects`: Discovers all managed object types (`user`, `role`, `organization`).
+- `getManagedObjectSchema`: Retrieves schema definitions and attribute properties.
+- `queryManagedObjects`: Queries objects using CREST `_queryFilter` syntax (`userName sw 'john'`).
+- `createManagedObject`: Creates a new managed object instance.
+- `getManagedObject`: Fetches a single object by internal ID.
+- `patchManagedObject`: Applies partial modifications using RFC 6902 patch operations.
+- `deleteManagedObject`: Deletes an object.
+
+### OAuth 2.0 / OIDC Applications
+- `listOidcApps`: Lists registered client applications.
+- `getOidcApp`: Retrieves full client configuration (scopes, grant types, redirect URIs).
+- `createOidcApp`: Provisions a new confidential or public OAuth2 client.
+- `updateOidcApp`: Updates redirect URIs, scopes, or authentication signing algorithms.
+- `deleteOidcApp`: Removes an OAuth client application.
+
+### Logging, Themes & Variables
+- `queryLogs`: Searches audit and monitoring logs with filtering.
+- `getLogSources`: Lists available log topics (`access`, `activity`, `authentication`, `config`).
+- `getThemes` / `createTheme` / `updateTheme` / `setDefaultTheme`: Customizes branding and login UI themes.
+- `queryESVs` / `getVariable` / `setVariable` / `deleteVariable`: Manages environment variables and secrets.
+
+---
+
+## 🧪 Testing & Verification
+
+Run the full automated test suite:
+
+```bash
+# Run 69 test files (1,260+ tests):
 npm test
 
-# Watch mode for development
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
-
-# Update tool schema snapshots
-npm run test:snapshots:update
+# Run live integration verification against local or remote Ping stack:
+AM_ADMIN_PASSWORD="<password>" IDM_ADMIN_PASSWORD="<password>" node test-ai-scenarios.mjs
 ```
 
-</details>
+---
 
-<details>
-<summary><h3>MCP Inspector</h3></summary>
+## 📄 License
 
-Use the MCP Inspector to visually test tools in a web interface:
-
-```bash
-# Development mode (no build required - faster iteration)
-AIC_BASE_URL=your-tenant.forgeblocks.com npm run dev:inspect
-
-# Production mode (requires build first)
-npm run build
-AIC_BASE_URL=your-tenant.forgeblocks.com npm run inspect
-```
-
-Hosts a web interface for interactive tool testing and OAuth flow debugging.
-
-</details>
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Feedback & Issues
-
-We welcome your feedback! Please use this repository's [issue tracker](https://github.com/pingidentity/aic-mcp-server/issues) to submit feedback, bug reports, or enhancement requests. For existing issues, you can add a 👍 reaction to help our team gauge priority.
-
-## License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+Licensed under the [Apache License, Version 2.0](LICENSE).

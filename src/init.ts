@@ -6,10 +6,11 @@
 import { normalizeAicBaseUrl } from './utils/urlHelpers.js';
 
 // Validate required environment variable
-if (!process.env.AIC_BASE_URL) {
-  console.error('FATAL: AIC_BASE_URL environment variable is not set.');
-  process.exit(1);
+if (!process.env.AIC_BASE_URL && !process.env.AM_BASE_URL) {
+  process.env.AIC_BASE_URL = 'http://am.ping.local:8080';
 }
 
-// Normalize AIC_BASE_URL (removes protocol, path, port - keeps hostname only)
-process.env.AIC_BASE_URL = normalizeAicBaseUrl(process.env.AIC_BASE_URL);
+if (process.env.AIC_BASE_URL) {
+  process.env.AIC_BASE_URL = normalizeAicBaseUrl(process.env.AIC_BASE_URL);
+}
+

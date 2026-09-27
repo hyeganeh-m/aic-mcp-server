@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/managedObjects/patchManagedObjectRelationship.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -52,7 +53,7 @@ export const patchManagedObjectRelationshipTool = {
     action: 'add' | 'update' | 'remove';
     propertyDefinition?: Record<string, any>;
   }) {
-    const url = `https://${aicBaseUrl}/openidm/schema/managed/${objectType}/properties/${propertyName}`;
+    const url = `${getIdmBaseUrl()}/schema/managed/${objectType}/properties/${propertyName}`;
 
     try {
       if ((action === 'add' || action === 'update') && !propertyDefinition) {

@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/getManagedObjectSchema.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -38,7 +39,7 @@ export const getManagedObjectSchemaTool = {
     objectType: string;
     includeFullDefinition?: boolean;
   }) {
-    const url = `https://${aicBaseUrl}/openidm/config/managed`;
+    const url = `${getIdmBaseUrl()}/config/managed`;
 
     try {
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES);

@@ -1,3 +1,4 @@
+import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 // src/tools/managedObjects/createManagedObjectDefinition.ts
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
@@ -31,7 +32,7 @@ export const createManagedObjectDefinitionTool = {
       )
   },
   async toolFunction({ objectName, objectDefinition }: { objectName: string; objectDefinition: Record<string, any> }) {
-    const url = `https://${aicBaseUrl}/openidm/config/managed`;
+    const url = `${getIdmBaseUrl()}/config/managed`;
 
     try {
       // GET current config to check for name collision
