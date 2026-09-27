@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_API_HEADERS } from '../../utils/amHelpers.js';
 
 // Define scopes as a constant so they can be referenced in both the tool definition and function
@@ -24,7 +24,7 @@ export const listJourneysTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm to query')
+    realm: realmSchema.describe('The realm to query')
   },
   async toolFunction({ realm }: { realm: string }) {
     try {

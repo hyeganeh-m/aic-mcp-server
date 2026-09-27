@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 import { buildAMJourneyNodesUrl, AM_API_HEADERS, categorizeError } from '../../utils/amHelpers.js';
 
 const SCOPES = ['fr:am:*'];
@@ -18,7 +18,7 @@ export const updateJourneyNodeTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm containing the node'),
+    realm: realmSchema.describe('The realm containing the node'),
     nodeType: safePathSegmentSchema.describe('The node type (e.g., "ScriptedDecisionNode")'),
     nodeId: z.string().uuid().describe('The node instance UUID (from a previous read or create operation)'),
     config: z

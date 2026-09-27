@@ -79,7 +79,7 @@ describe('listScripts', () => {
     });
 
     it('should reject invalid realm', () => {
-      expect(() => listScriptsTool.inputSchema.realm.parse('invalid')).toThrow();
+      expect(() => listScriptsTool.inputSchema.realm.parse('../invalid')).toThrow();
     });
   });
 

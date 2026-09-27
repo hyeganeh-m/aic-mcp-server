@@ -8,7 +8,7 @@
 
 import { z } from 'zod';
 
-// Realms supported in the environment (local Ping platform + AIC)
+// Known baseline realms (kept for backward compatibility and references)
 export const REALMS = [
   'customers',
   'employees',
@@ -17,6 +17,34 @@ export const REALMS = [
   'alpha',
   'bravo'
 ] as const;
+
+/**
+ * Validates that a value is safe to use as a realm name.
+ * Accepts any realm name with an optional leading slash (e.g., 'customers', '/customers', 'alpha', 'root', '/', 'my-realm').
+ * Rejects path traversal (..) and backslashes.
+ */
+export function isValidRealm(value: string): boolean {
+  if (!value || typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (trimmed === '/' || trimmed === 'root') return true;
+  const segment = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+  if (!segment) return false;
+  return isValidPathSegment(segment);
+}
+
+/**
+ * Zod schema for validating realm parameters dynamically.
+ * Accepts any realm name configured in the target PingAM/AIC deployment (including custom enterprise realms).
+ */
+export const realmSchema = z
+  .string()
+  .min(1, 'Realm name cannot be empty')
+  .refine((val) => val.trim().length > 0, {
+    message: 'Realm name cannot be empty or whitespace'
+  })
+  .refine(isValidRealm, {
+    message: 'Realm name must not contain path traversal characters (.., \\) or multiple path separators'
+  });
 
 
 /**

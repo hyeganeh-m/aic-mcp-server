@@ -2,7 +2,7 @@ import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
 
 const aicBaseUrl = process.env.AIC_BASE_URL;
@@ -59,7 +59,7 @@ export const getOidcAppSchemaTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm'),
+    realm: realmSchema.describe('The realm'),
     summary: z
       .boolean()
       .default(true)
@@ -86,7 +86,7 @@ export const getOidcAppSchemaTool = {
     sections,
     includeDefaults = false
   }: {
-    realm: (typeof REALMS)[number];
+    realm: string;
     summary?: boolean;
     sections?: string[];
     includeDefaults?: boolean;

@@ -3,6 +3,8 @@ import {
   isValidPathSegment,
   safePathSegmentSchema,
   featureNameSchema,
+  isValidRealm,
+  realmSchema,
   REALMS
 } from '../../src/utils/validationHelpers.js';
 
@@ -127,4 +129,40 @@ describe('validationHelpers', () => {
       expect(() => featureNameSchema.parse(value)).toThrow();
     });
   });
+
+  // ===== isValidRealm & realmSchema =====
+  describe('realmSchema', () => {
+    it.each([
+      'root',
+      '/',
+      'alpha',
+      'bravo',
+      'customers',
+      '/customers',
+      'employees',
+      'service-accounts',
+      'custom-enterprise-realm',
+      'partners'
+    ])('should accept valid realm: "%s"', (realm) => {
+      expect(realmSchema.parse(realm)).toBe(realm);
+    });
+
+    it('should reject empty string', () => {
+      expect(() => realmSchema.parse('')).toThrow();
+    });
+
+    it('should reject whitespace-only string', () => {
+      expect(() => realmSchema.parse('   ')).toThrow();
+    });
+
+    it.each([
+      '../etc',
+      'foo/bar/baz',
+      'realm\\bad',
+      '%2e%2e'
+    ])('should reject path traversal in realm: "%s"', (realm) => {
+      expect(() => realmSchema.parse(realm)).toThrow();
+    });
+  });
 });
+

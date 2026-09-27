@@ -382,8 +382,9 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 
 ## 🛠️ Available MCP Tools
 
-### Authentication Journeys & Trees
-- `listJourneys`: Discovers all authentication trees in a realm.
+### Realms, Authentication Journeys & Trees
+- `listRealms`: Dynamically discovers and lists all configured realms (paths, names, aliases, active status) in any PingAM / AIC deployment.
+- `listJourneys`: Discovers all authentication trees in any target realm.
 - `getJourney`: Retrieves full node configuration, layout, and connections.
 - `createJourney`: Creates a new authentication journey with node layout.
 - `updateJourney`: Modifies journey structures and entry points.
@@ -391,8 +392,10 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 - `setDefaultJourney`: Configures a realm's default login journey.
 - `getJourneyPreviewUrl`: Generates direct testing URLs for end users.
 
+> 🌐 **Dynamic Realm Architecture**: The MCP server is completely dynamic and is **never** restricted to a hardcoded list of realms. You can target any custom realm in your deployment (e.g. `workforce`, `partners`, `b2b`, `customers`, `alpha`, or root `/`). Call `listRealms` to discover available realms in any connected PingAM environment.
+
 ### Scripts & Policy
-- `listScripts`: Lists all groovy/javascript scripts.
+- `listScripts`: Lists all groovy/javascript scripts in a realm.
 - `getAMScript`: Fetches script content and metadata.
 - `createScript`: Creates a new script in a target realm.
 - `updateScript`: Updates script source code and evaluation engine context.
@@ -408,7 +411,7 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 - `deleteManagedObject`: Deletes an object.
 
 ### OAuth 2.0 / OIDC Applications
-- `listOidcApps`: Lists registered client applications.
+- `listOidcApps`: Lists registered client applications in any target realm.
 - `getOidcApp`: Retrieves full client configuration (scopes, grant types, redirect URIs).
 - `createOidcApp`: Provisions a new confidential or public OAuth2 client.
 - `updateOidcApp`: Updates redirect URIs, scopes, or authentication signing algorithms.
@@ -417,7 +420,7 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 ### Logging, Themes & Variables
 - `queryLogs`: Searches audit and monitoring logs with filtering.
 - `getLogSources`: Lists available log topics (`access`, `activity`, `authentication`, `config`).
-- `getThemes` / `createTheme` / `updateTheme` / `setDefaultTheme`: Customizes branding and login UI themes.
+- `getThemes` / `createTheme` / `updateTheme` / `setDefaultTheme`: Customizes branding and login UI themes per realm.
 - `queryESVs` / `getVariable` / `setVariable` / `deleteVariable`: Manages environment variables and secrets.
 
 ---
@@ -427,7 +430,7 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 Run the full automated test suite:
 
 ```bash
-# Run 69 test files (1,260+ tests):
+# Run 70 test files (1,280+ tests):
 npm test
 
 # Run live integration verification against local or remote Ping stack:

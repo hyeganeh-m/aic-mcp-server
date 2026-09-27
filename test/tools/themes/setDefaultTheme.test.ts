@@ -580,7 +580,7 @@ describe('setDefaultTheme', () => {
   describe('Input Validation', () => {
     it('should reject invalid realm enum', () => {
       expect(() => {
-        setDefaultThemeTool.inputSchema.realm.parse('invalid');
+        setDefaultThemeTool.inputSchema.realm.parse('../invalid');
       }).toThrow();
     });
 

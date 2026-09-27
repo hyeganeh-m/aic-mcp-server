@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_SCRIPT_HEADERS, decodeBase64Field } from '../../utils/amHelpers.js';
 
 // Define scopes as a constant so they can be referenced in both the tool definition and function
@@ -18,7 +18,7 @@ export const getAMScriptTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm containing the script'),
+    realm: realmSchema.describe('The realm containing the script'),
     scriptId: safePathSegmentSchema.describe(
       "The unique identifier of the script (UUID format, e.g., '01e1a3c0-038b-4c16-956a-6c9d89328cff')"
     )

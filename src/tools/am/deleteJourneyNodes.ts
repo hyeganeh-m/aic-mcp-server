@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 import { buildAMJourneyNodesUrl, AM_API_HEADERS } from '../../utils/amHelpers.js';
 
 const SCOPES = ['fr:am:*'];
@@ -16,7 +16,7 @@ export const deleteJourneyNodesTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm containing the nodes'),
+    realm: realmSchema.describe('The realm containing the nodes'),
     nodes: z
       .array(
         z.object({

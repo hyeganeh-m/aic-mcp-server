@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 import {
   buildAMJourneyUrl,
   AM_API_HEADERS,
@@ -27,7 +27,7 @@ export const updateJourneyTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm containing the journey'),
+    realm: realmSchema.describe('The realm containing the journey'),
     journeyName: safePathSegmentSchema.describe('The name of the journey to update'),
     description: z.string().optional().describe('Admin-facing description of the journey'),
     identityResource: z

@@ -2,7 +2,7 @@ import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
 
 const aicBaseUrl = process.env.AIC_BASE_URL;
@@ -38,7 +38,7 @@ export const updateOidcAppTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm'),
+    realm: realmSchema.describe('The realm'),
     name: z.string().min(1).describe('The application name'),
     oauth2Client: z
       .record(z.any())
@@ -69,7 +69,7 @@ export const updateOidcAppTool = {
     oauth2Client,
     managedApplication
   }: {
-    realm: (typeof REALMS)[number];
+    realm: string;
     name: string;
     oauth2Client?: Record<string, any>;
     managedApplication?: {

@@ -22,3 +22,4 @@ export { getCorsPolicyTool } from './getCorsPolicy.js';
 export { createCorsPolicyTool } from './createCorsPolicy.js';
 export { updateCorsPolicyTool } from './updateCorsPolicy.js';
 export { deleteCorsPolicyTool } from './deleteCorsPolicy.js';
+export { listRealmsTool } from './listRealms.js';

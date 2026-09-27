@@ -2,7 +2,7 @@ import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 
 const aicBaseUrl = process.env.AIC_BASE_URL;
 
@@ -19,7 +19,7 @@ export const updateThemeTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('Realm name'),
+    realm: realmSchema.describe('Realm name'),
     themeIdentifier: safePathSegmentSchema.describe('Theme ID or name'),
     themeUpdates: z.record(z.any()).describe('Object containing the fields to update (cannot update _id or isDefault)')
   },

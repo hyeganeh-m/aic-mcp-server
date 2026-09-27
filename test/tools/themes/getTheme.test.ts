@@ -175,7 +175,7 @@ describe('getTheme', () => {
   describe('Input Validation', () => {
     it('should reject invalid realm enum', () => {
       const schema = getThemeTool.inputSchema.realm;
-      expect(() => schema.parse('invalid')).toThrow();
+      expect(() => schema.parse('../invalid')).toThrow();
     });
 
     it('should accept all valid realm enum values', async () => {

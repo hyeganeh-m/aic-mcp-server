@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_API_HEADERS } from '../../utils/amHelpers.js';
 
 const SCOPES = ['fr:am:*'];
@@ -22,7 +22,7 @@ export const getDynamicNodeOutcomesTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm to query'),
+    realm: realmSchema.describe('The realm to query'),
     nodeType: z.string().min(1).describe('The node type (e.g., "PageNode", "ChoiceCollectorNode")'),
     config: z
       .record(z.any())

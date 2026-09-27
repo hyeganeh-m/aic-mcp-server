@@ -141,7 +141,7 @@ describe('listJourneys', () => {
     });
 
     it('should reject invalid realm values', () => {
-      expect(() => listJourneysTool.inputSchema.realm.parse('invalid')).toThrow();
+      expect(() => listJourneysTool.inputSchema.realm.parse('../invalid')).toThrow();
     });
   });
 

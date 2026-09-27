@@ -256,7 +256,7 @@ describe('getOidcAppSchema', () => {
 
     it('should reject invalid realm values', () => {
       const schema = getOidcAppSchemaTool.inputSchema.realm;
-      expect(() => schema.parse('invalid')).toThrow();
+      expect(() => schema.parse('../invalid')).toThrow();
     });
 
     it('should default summary to true', () => {

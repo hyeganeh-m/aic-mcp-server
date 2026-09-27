@@ -499,7 +499,7 @@ describe('updateTheme', () => {
     it('should reject invalid realm enum', () => {
       const schema = updateThemeTool.inputSchema;
       expect(() => {
-        schema.realm.parse('invalid');
+        schema.realm.parse('../invalid');
       }).toThrow();
     });
 

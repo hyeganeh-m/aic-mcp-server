@@ -376,7 +376,7 @@ describe('getJourney', () => {
     });
 
     it('should reject invalid realm', () => {
-      expect(() => getJourneyTool.inputSchema.realm.parse('invalid')).toThrow();
+      expect(() => getJourneyTool.inputSchema.realm.parse('../invalid')).toThrow();
     });
 
     it('should use safePathSegmentSchema for journeyName', () => {

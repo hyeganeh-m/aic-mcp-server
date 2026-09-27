@@ -142,7 +142,7 @@ describe('getAMScript', () => {
     });
 
     it('should reject invalid realm', () => {
-      expect(() => getAMScriptTool.inputSchema.realm.parse('invalid')).toThrow();
+      expect(() => getAMScriptTool.inputSchema.realm.parse('../invalid')).toThrow();
     });
 
     it('should use safePathSegmentSchema for scriptId', () => {

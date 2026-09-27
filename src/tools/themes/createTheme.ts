@@ -2,7 +2,7 @@ import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 import { randomUUID } from 'crypto';
 
 const aicBaseUrl = process.env.AIC_BASE_URL;
@@ -20,7 +20,7 @@ export const createThemeTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('Realm name'),
+    realm: realmSchema.describe('Realm name'),
     themeData: z.record(z.any()).describe('Theme configuration object (must include a "name" property)')
   },
   async toolFunction({ realm, themeData }: { realm: string; themeData: Record<string, any> }) {

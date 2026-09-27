@@ -1,0 +1,31 @@
+{
+  "name": "listRealms",
+  "title": "List Realms",
+  "description": "Discovers and lists all configured realms in the target PingAM / AIC deployment. Returns realm names, paths, aliases, and active status. Use this tool to find available realms dynamically in any deployment instead of guessing or using hardcoded names.",
+  "scopes": [
+    "fr:am:*"
+  ],
+  "inputSchema": {
+    "queryFilter": {
+      "_def": {
+        "innerType": {
+          "_def": {
+            "checks": [],
+            "typeName": "ZodString",
+            "coerce": false
+          },
+          "~standard": {
+            "version": 1,
+            "vendor": "zod"
+          }
+        },
+        "typeName": "ZodOptional",
+        "description": "Optional CREST query filter (default: \"true\" to list all realms). Example: name sw \"cust\""
+      },
+      "~standard": {
+        "version": 1,
+        "vendor": "zod"
+      }
+    }
+  }
+}

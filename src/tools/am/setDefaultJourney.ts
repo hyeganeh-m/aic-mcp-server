@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, categorizeError } from '../../utils/amHelpers.js';
 
 const SCOPES = ['fr:am:*'];
@@ -24,7 +24,7 @@ export const setDefaultJourneyTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm to configure'),
+    realm: realmSchema.describe('The realm to configure'),
     journeyName: safePathSegmentSchema.describe('The name of the journey to set as default')
   },
   async toolFunction({ realm, journeyName }: { realm: string; journeyName: string }) {

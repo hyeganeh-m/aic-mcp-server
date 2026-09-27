@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_SCRIPT_HEADERS_V2, encodeBase64 } from '../../utils/amHelpers.js';
 
 const SCOPES = ['fr:am:*'];
@@ -16,7 +16,7 @@ export const createScriptTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm to create the script in'),
+    realm: realmSchema.describe('The realm to create the script in'),
     name: z.string().min(1).describe('The name of the script'),
     description: z.string().optional().describe('Optional description of the script'),
     script: z.string().min(1).describe('The JavaScript source code for the script')

@@ -2,7 +2,7 @@ import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 
 import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
 
@@ -21,13 +21,13 @@ export const listOidcAppsTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm'),
+    realm: realmSchema.describe('The realm'),
     queryFilter: z
       .string()
       .optional()
       .describe('Optional CREST query filter. Default: true (all apps). ' + 'Example: name sw "my"')
   },
-  async toolFunction({ realm, queryFilter }: { realm: (typeof REALMS)[number]; queryFilter?: string }) {
+  async toolFunction({ realm, queryFilter }: { realm: string; queryFilter?: string }) {
     try {
       const filter = queryFilter || 'true';
       const isStandaloneAm = Boolean(

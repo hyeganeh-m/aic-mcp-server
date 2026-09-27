@@ -69,7 +69,7 @@ describe('getJourneyPreviewUrl', () => {
     });
 
     it('should reject invalid realm values', () => {
-      expect(() => getJourneyPreviewUrlTool.inputSchema.realm.parse('invalid')).toThrow();
+      expect(() => getJourneyPreviewUrlTool.inputSchema.realm.parse('../invalid')).toThrow();
     });
 
     it('should allow optional journeyName', () => {

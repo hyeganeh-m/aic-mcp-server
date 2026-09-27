@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createToolResponse } from '../../utils/apiHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 import { fetchNodeTypeDetails } from '../../utils/amHelpers.js';
 
 const SCOPES = ['fr:am:*'];
@@ -16,7 +16,7 @@ export const getNodeTypeDetailsTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm to query'),
+    realm: realmSchema.describe('The realm to query'),
     nodeTypes: z
       .array(safePathSegmentSchema)
       .min(1)

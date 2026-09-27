@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createToolResponse } from '../../utils/apiHelpers.js';
-import { REALMS, safePathSegmentSchema } from '../../utils/validationHelpers.js';
+import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 
 const aicBaseUrl = process.env.AIC_BASE_URL;
 
@@ -14,7 +14,7 @@ export const getJourneyPreviewUrlTool = {
     readOnlyHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm containing the journey'),
+    realm: realmSchema.describe('The realm containing the journey'),
     journeyName: safePathSegmentSchema
       .optional()
       .describe('The name of the journey to preview. If omitted, returns the URL for the default journey.')

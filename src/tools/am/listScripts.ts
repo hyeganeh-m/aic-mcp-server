@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { REALMS } from '../../utils/validationHelpers.js';
+import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_SCRIPT_HEADERS_V2 } from '../../utils/amHelpers.js';
 
 const SCOPES = ['fr:am:*'];
@@ -17,7 +17,7 @@ export const listScriptsTool = {
     openWorldHint: true
   },
   inputSchema: {
-    realm: z.enum(REALMS).describe('The realm to query')
+    realm: realmSchema.describe('The realm to query')
   },
   async toolFunction({ realm }: { realm: string }) {
     try {
