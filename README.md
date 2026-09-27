@@ -227,10 +227,28 @@ When provisioning administrator accounts for PingAM (`amadmin`) or PingIDM (`ope
 
 ---
 
-## ⚙️ Alternative Connection Modes
+## 🏛️ Deployment Topologies & Environment Setup (Local & Remote)
 
-### Cloud Mode: PingOne Advanced Identity Cloud (AIC)
-If targeting a cloud tenant instead of a local/on-prem stack, set `AIC_BASE_URL`:
+The MCP server connects to any Ping Identity deployment topology: **Local Docker**, **Remote Enterprise On-Premises/Private Cloud**, **Standalone PingAM (no IDM)**, or **PingOne Advanced Identity Cloud (AIC)**.
+
+### 🔑 Authentication Architecture: Direct Session vs OAuth Gateway
+
+Understanding how authentication works clarifies why **no OAuth2 clients or custom users are needed** for standard deployments:
+
+| Authentication Mode | Deployment Targets | OAuth2 Client Needed in PingAM? | Custom Users Required? | How It Works |
+| :--- | :--- | :---: | :---: | :--- |
+| **Direct Admin SSO (Recommended)** | Local Docker, Remote On-Prem, Standalone PingAM | ❌ **No Client Needed** | ❌ **No (uses built-in `amadmin`)** | Directly authenticates via CREST `/json/realms/root/authenticate` to acquire an `iPlanetDirectoryPro` administrative session token. Zero OAuth client configuration. |
+| **Interactive Browser PKCE** | Workstations targeting PingAM with browser | ✅ Yes (`AICMCPClient` on `localhost:3000`) | ❌ No (logs in as `amadmin` or realm admin) | Opens default browser, executes target realm journey, caches session in native OS Keychain. |
+| **Cloud Gateway Mode** | PingOne AIC (`*.forgeblocks.com`) | ❌ Pre-configured in cloud | ❌ Uses Tenant Cloud Admin | Authenticates via cloud gateway and down-scopes tokens via RFC 8693 token exchange. |
+
+---
+
+### 1. Topology 1: Standalone PingAM (No PingIDM at All)
+Use this setup when you have PingAM running with CTS (Core Token Service) and an Identity Repository (OpenDJ, Active Directory, or OpenLDAP), but **no PingIDM service**.
+
+- **OAuth2 Client Required?**: **NO.**
+- **User Required**: Default built-in `amadmin` (or any realm admin).
+- **Behavior**: All PingAM operations (Journeys, Trees, Nodes, Scripts, Decisions, CORS, and OAuth2 Client management) operate at 100% functionality. Any accidental call to an IDM tool gracefully reports that IDM is not configured, without crashing or hanging.
 
 ```json
 {
@@ -239,15 +257,126 @@ If targeting a cloud tenant instead of a local/on-prem stack, set `AIC_BASE_URL`
       "command": "node",
       "args": ["/path/to/aic-mcp-server/dist/index.js"],
       "env": {
-        "AIC_BASE_URL": "openam-mytenant.forgeblocks.com"
+        "AM_BASE_URL": "http://am.ping.local:8080/am",
+        "AM_REALM": "customers",
+        "AM_ADMIN_USERNAME": "amadmin",
+        "AM_ADMIN_PASSWORD": "<your-am-admin-password>"
       }
     }
   }
 }
 ```
 
-### Interactive Browser PKCE Mode
-If admin credentials are not provided, the MCP server automatically launches your local browser on `http://localhost:3000` to authenticate interactively via PingAM's login journey.
+---
+
+### 2. Topology 2: PingAM + PingIDM (Local Docker Stack)
+Use this setup when running both PingAM and PingIDM in Docker Compose (e.g. `am.ping.local:8080/am` and `localhost:8082/openidm`).
+
+- **OAuth2 Client Required?**: **NO.** Both services use direct administrative authentication.
+- **Users Required**:
+  - PingAM: `amadmin` (built-in root administrator).
+  - PingIDM: `openidm-admin` (built-in IDM administrator).
+- **FQDN Requirement**: PingAM enforces cookie domains. Add the hostname to `/etc/hosts`:
+  ```text
+  127.0.0.1 am.ping.local idm.ping.local
+  ```
+
+```json
+{
+  "mcpServers": {
+    "ping-platform": {
+      "command": "node",
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
+      "env": {
+        "AM_BASE_URL": "http://am.ping.local:8080/am",
+        "IDM_BASE_URL": "http://localhost:8082/openidm",
+        "AM_REALM": "customers",
+        "AM_ADMIN_USERNAME": "amadmin",
+        "AM_ADMIN_PASSWORD": "<your-am-admin-password>",
+        "IDM_ADMIN_USERNAME": "openidm-admin",
+        "IDM_ADMIN_PASSWORD": "<your-idm-admin-password>"
+      }
+    }
+  }
+}
+```
+
+---
+
+### 3. Topology 3: Remote Enterprise PingAM & IDM (Dev, Staging, or Production)
+Use this setup when connecting your AI tools to enterprise servers deployed in your data center, AWS, Azure, or GCP.
+
+- **OAuth2 Client Required?**: **NO.** Works directly against the remote CREST APIs.
+- **Connection Guidelines**:
+  - **HTTPS & Certificates**: Use the full HTTPS URL (e.g. `https://am.corp.example.com/am`). If using private enterprise PKI certificates, ensure the CA cert is added to Node's trusted store (`NODE_EXTRA_CA_CERTS=/path/to/ca.pem`) or system keychain.
+  - **Reverse Proxies & Ingress**: The server respects standard reverse proxies (NGINX, Envoy, Traefik). Ensure path prefixes (e.g. `/am` and `/openidm`) match your proxy routing rules.
+  - **Port Accessibility**: Ensure your machine can reach the remote ports (typically `443` or `8443`) through your corporate VPN or tunnel.
+
+```json
+{
+  "mcpServers": {
+    "ping-platform": {
+      "command": "node",
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
+      "env": {
+        "AM_BASE_URL": "https://am.corp.example.com/am",
+        "IDM_BASE_URL": "https://idm.corp.example.com/openidm",
+        "AM_REALM": "workforce",
+        "AM_ADMIN_USERNAME": "amadmin",
+        "AM_ADMIN_PASSWORD": "<remote-amadmin-password>",
+        "IDM_ADMIN_USERNAME": "openidm-admin",
+        "IDM_ADMIN_PASSWORD": "<remote-openidm-password>"
+      }
+    }
+  }
+}
+```
+
+---
+
+### 4. Topology 4: PingOne Advanced Identity Cloud (AIC)
+Use this setup when managing an official Ping Identity cloud tenant.
+
+- **OAuth2 Client Required?**: Pre-configured by PingOne AIC cloud gateway.
+- **Authentication**: Set `AIC_BASE_URL` to your tenant domain. The MCP server connects via OAuth 2.0 PKCE browser login or device code flow.
+
+```json
+{
+  "mcpServers": {
+    "ping-platform": {
+      "command": "node",
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
+      "env": {
+        "AIC_BASE_URL": "openam-mytenant.forgeblocks.com",
+        "AIC_REALM": "alpha"
+      }
+    }
+  }
+}
+```
+
+---
+
+### 5. Configuring an OAuth2 Client for Interactive PKCE (Optional)
+If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead want an interactive browser popup on your local or remote PingAM instance, configure an OAuth2 client in PingAM:
+
+1. **Realm**: Select your administration realm (e.g. `/` or `/customers`).
+2. **Client ID**: `AICMCPClient`
+3. **Client Type**: `Public` (no client secret)
+4. **Redirection URIs**: `http://localhost:3000`
+5. **Scopes**: `openid`, `profile`, `am-admin` (or realm management scopes)
+6. **Grant Types**: `authorization_code` with PKCE enabled.
+
+*(Note: If you use `AM_ADMIN_USERNAME` and `AM_ADMIN_PASSWORD` direct SSO session mode, this step is completely unnecessary!)*
+
+---
+
+### 6. Required User Roles & Permissions Reference
+
+| Component | Default Superuser | Custom User Role Requirements |
+| :--- | :--- | :--- |
+| **PingAM** | `amadmin` | Built into the root realm (`/`). If using a delegated admin account, the user must belong to `cn=admins` in the target realm or hold the `Realm Administrator` privilege in AM. |
+| **PingIDM** | `openidm-admin` | Built into PingIDM configuration. If using a custom identity, assign the internal role `openidm-admin` or `openidm-authorized` in `conf/authentication.json` / `repo.json`. |
 
 ---
 
