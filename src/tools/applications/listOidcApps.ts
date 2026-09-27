@@ -4,6 +4,8 @@ import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHel
 import { formatSuccess } from '../../utils/responseHelpers.js';
 import { REALMS } from '../../utils/validationHelpers.js';
 
+import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
+
 const aicBaseUrl = process.env.AIC_BASE_URL;
 const SCOPES = ['fr:idm:*'];
 
@@ -28,13 +30,28 @@ export const listOidcAppsTool = {
   async toolFunction({ realm, queryFilter }: { realm: (typeof REALMS)[number]; queryFilter?: string }) {
     try {
       const filter = queryFilter || 'true';
-      const fields = 'name,ssoEntities,templateName,authoritative,_id';
-      const url =
-        `${getIdmBaseUrl()}/managed/${realm}_application` +
-        `?_queryFilter=${encodeURIComponent(filter)}&_fields=${fields}`;
+      const isStandaloneAm = Boolean(
+        !process.env.IDM_BASE_URL &&
+        (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
+      );
 
-      const { data, response } = await makeAuthenticatedRequest(url, SCOPES, {
-        method: 'GET'
+      let url: string;
+      let scopes = SCOPES;
+      let headers: Record<string, string> = {};
+
+      if (isStandaloneAm) {
+        url = `${buildAMRealmUrl(realm, 'realm-config/agents/OAuth2Client')}?_queryFilter=${encodeURIComponent(filter)}`;
+        headers = { ...AM_OAUTH2_CLIENT_HEADERS };
+      } else {
+        const fields = 'name,ssoEntities,templateName,authoritative,_id';
+        url =
+          `${getIdmBaseUrl()}/managed/${realm}_application` +
+          `?_queryFilter=${encodeURIComponent(filter)}&_fields=${fields}`;
+      }
+
+      const { data, response } = await makeAuthenticatedRequest(url, scopes, {
+        method: 'GET',
+        headers
       });
 
       return createToolResponse(formatSuccess(data, response));

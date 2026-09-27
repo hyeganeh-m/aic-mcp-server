@@ -64,7 +64,7 @@ export const createOidcAppTool = {
 
       // Create AM OAuth2Client (PUT with If-None-Match: * for safety)
       const amUrl = buildAMRealmUrl(realm, `realm-config/agents/OAuth2Client/${encodeURIComponent(clientId)}`);
-      const { data: amData } = await makeAuthenticatedRequest(amUrl, SCOPES, {
+      const { data: amData, response: amResponse } = await makeAuthenticatedRequest(amUrl, SCOPES, {
         method: 'PUT',
         headers: {
           ...AM_OAUTH2_CLIENT_HEADERS,
@@ -72,6 +72,20 @@ export const createOidcAppTool = {
         },
         body: JSON.stringify(amPayload)
       });
+
+      const isStandaloneAm = Boolean(
+        !process.env.IDM_BASE_URL &&
+        (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
+      );
+
+      if (isStandaloneAm) {
+        return createToolResponse(
+          formatSuccess(
+            { oauth2Client: amData, clientId, realm },
+            amResponse
+          )
+        );
+      }
 
       // Create IDM managed application with linking fields
       const idmPayload = {

@@ -22,6 +22,34 @@ export const getOidcAppTool = {
   },
   async toolFunction({ realm, name }: { realm: (typeof REALMS)[number]; name: string }) {
     try {
+      const isStandaloneAm = Boolean(
+        !process.env.IDM_BASE_URL &&
+        (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
+      );
+
+      if (isStandaloneAm) {
+        const amUrl = buildAMRealmUrl(realm, `realm-config/agents/OAuth2Client/${encodeURIComponent(name)}`);
+        const { data, response } = await makeAuthenticatedRequest(amUrl, SCOPES, {
+          method: 'GET',
+          headers: AM_OAUTH2_CLIENT_HEADERS
+        });
+        return createToolResponse(
+          JSON.stringify(
+            {
+              status: response.status,
+              statusText: response.statusText,
+              data: {
+                oauth2Client: data,
+                applicationName: name,
+                realm
+              }
+            },
+            null,
+            2
+          )
+        );
+      }
+
       // Look up IDM managed application by name
       const idmQueryUrl =
         `${getIdmBaseUrl()}/managed/${realm}_application` +

@@ -37,6 +37,14 @@ export async function makeAuthenticatedRequest(
         'X-OpenIDM-Password': process.env.IDM_ADMIN_PASSWORD
       };
     } else {
+      // In on-prem / standalone AM deployments without IDM, don't trigger PKCE auth flow for missing IDM
+      const isStandaloneAm = Boolean(process.env.AM_BASE_URL || (process.env.AIC_BASE_URL && !process.env.AIC_BASE_URL.includes('forgeblocks.com')));
+      if (isStandaloneAm && !process.env.IDM_BASE_URL) {
+        throw new Error(
+          'PingIDM is not configured in this environment (IDM_BASE_URL and IDM credentials are not set). ' +
+          'The platform is operating in PingAM standalone mode — all PingAM capabilities (Journeys, Nodes, Trees, Scripts, CORS) remain fully operational.'
+        );
+      }
       const token = await getAuthService().getToken(scopes);
       authHeaders = {
         'Authorization': `Bearer ${token}`
@@ -46,17 +54,27 @@ export async function makeAuthenticatedRequest(
     authHeaders = await getAuthService().getAuthHeader(scopes);
   }
 
-
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...authHeaders,
-      'User-Agent': USER_AGENT,
-      // Only add Content-Type header if the request has a body
-      ...(options.body && { 'Content-Type': 'application/json' }),
-      ...options.headers
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        ...authHeaders,
+        'User-Agent': USER_AGENT,
+        // Only add Content-Type header if the request has a body
+        ...(options.body && { 'Content-Type': 'application/json' }),
+        ...options.headers
+      }
+    });
+  } catch (err: any) {
+    if (isIdmRequest) {
+      throw new Error(
+        `Unable to reach PingIDM service at ${url} (${err.cause?.code || err.message}). ` +
+        'PingAM remains operational, but the IDM service is unreachable or not running.'
+      );
     }
-  });
+    throw err;
+  }
 
 
   if (!response.ok) {

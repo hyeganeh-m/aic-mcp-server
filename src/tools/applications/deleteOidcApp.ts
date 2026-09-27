@@ -23,6 +23,25 @@ export const deleteOidcAppTool = {
   },
   async toolFunction({ realm, name }: { realm: (typeof REALMS)[number]; name: string }) {
     try {
+      const isStandaloneAm = Boolean(
+        !process.env.IDM_BASE_URL &&
+        (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
+      );
+
+      if (isStandaloneAm) {
+        const amUrl = buildAMRealmUrl(realm, `realm-config/agents/OAuth2Client/${encodeURIComponent(name)}`);
+        const { response: amResponse } = await makeAuthenticatedRequest(amUrl, SCOPES, {
+          method: 'DELETE',
+          headers: AM_OAUTH2_CLIENT_HEADERS
+        });
+        return createToolResponse(
+          formatSuccess(
+            { deleted: [`PingAM OAuth2Client (${name}) in realm ${realm}`] },
+            amResponse
+          )
+        );
+      }
+
       // Look up IDM managed application by name
       const idmQueryUrl =
         `${getIdmBaseUrl()}/managed/${realm}_application` +
