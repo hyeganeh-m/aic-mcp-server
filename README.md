@@ -33,11 +33,48 @@ Administer identity trees, author authentication journeys, manage users and role
 
 ## 🚀 Quick Start & Client Installation
 
-### 1. Build from Source
+### 1. Install from a Tagged Release or Build from Source
+
+#### Option A: Clone & Build from Source (Recommended for Developers & AI Agents)
+
+Clone the **`feat/universal-platform`** branch (for the latest universal features) or a specific **release tag** (e.g., `v1.0.1-universal` for a pinned version):
 
 ```bash
-git clone https://github.com/hyeganeh-m/aic-mcp-server.git
+# Option 1: Track the latest universal branch
+git clone -b feat/universal-platform https://github.com/hyeganeh-m/aic-mcp-server.git
 cd aic-mcp-server
+
+# Option 2: Or checkout a specific versioned release tag
+# git clone -b v1.0.1-universal https://github.com/hyeganeh-m/aic-mcp-server.git
+# cd aic-mcp-server
+
+npm install
+npm run build
+```
+
+#### Option B: Install Prebuilt Release Archive (No TypeScript Build Required)
+
+Every tagged release (`v*-universal`) publishes a pre-compiled `aic-mcp-server-<tag>.tar.gz` bundle (with `dist/` already built) on [GitHub Releases](https://github.com/hyeganeh-m/aic-mcp-server/releases):
+
+```bash
+mkdir -p aic-mcp-server && cd aic-mcp-server
+curl -L https://github.com/hyeganeh-m/aic-mcp-server/releases/download/v1.0.1-universal/aic-mcp-server-v1.0.1-universal.tar.gz | tar -xz
+npm install --omit=dev
+```
+
+#### Option C: Upgrading an Existing Local Checkout
+
+```bash
+cd /path/to/aic-mcp-server
+git fetch origin --tags
+
+# Update to latest universal branch:
+git checkout feat/universal-platform
+git pull origin feat/universal-platform
+
+# Or switch to a specific release tag:
+# git checkout v1.0.1-universal
+
 npm install
 npm run build
 ```
@@ -499,11 +536,114 @@ _(Note: If you use `AM_ADMIN_USERNAME` and `AM_ADMIN_PASSWORD` direct SSO sessio
 Run the full automated test suite:
 
 ```bash
-# Run 70 test files (1,280+ tests):
+# Run 72 test files (1,326 unit tests):
 npm test
 
 # Run live integration verification against local or remote Ping stack:
 AM_ADMIN_PASSWORD="<password>" IDM_ADMIN_PASSWORD="<password>" node test-ai-scenarios.mjs
+```
+
+---
+
+## 📦 Versioning, Upstream Sync & Release Workflow (For Developers & AI Agents)
+
+> **Instructions for Developers & AI Agents**: Follow this workflow whenever you implement new features, fix bugs, sync upstream changes, or cut a new release of the Universal Ping Platform MCP Server.
+
+### 1. Branch Architecture & Invariants
+
+| Branch                    | Purpose                                                                                                                                                                                                                                    | Rule                                                                                                     |
+| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------- |
+| `main`                    | Clean mirror of upstream [`PingIdentity/aic-mcp-server`](https://github.com/pingidentity/aic-mcp-server).                                                                                                                                  | **Never** commit custom universal changes directly to `main`. Keep it fast-forwarded to `upstream/main`. |
+| `feat/universal-platform` | Primary development and release branch for the **Universal Ping MCP Server** (Direct Admin SSO login, 3-layer SSO session keep-alive & 401 auto-recovery, dynamic realm discovery, standalone PingAM mode, and local/on-prem URL helpers). | All universal features, bug fixes, and universal release tags are committed and merged into this branch. |
+
+### 2. Versioning & Tagging Scheme
+
+Universal releases mirror the upstream semantic version with a `-universal` suffix so it is always clear which upstream version is included:
+
+- **Upstream Release Tag (on `main`)**: `v<MAJOR>.<MINOR>.<PATCH>` (e.g., `v1.0.1`)
+- **Universal Release Tag (on `feat/universal-platform`)**:
+  - `v<MAJOR>.<MINOR>.<PATCH>-universal` (e.g., `v1.0.1-universal`) when first syncing an upstream version.
+  - `v<MAJOR>.<MINOR>.<PATCH>-universal.<N>` (e.g., `v1.0.1-universal.1`, `v1.0.1-universal.2`) for subsequent universal features or fixes before the next upstream version bump.
+
+### 3. Step-by-Step Release Checklist (After Making Code Changes)
+
+Whenever a developer or AI agent modifies code on `feat/universal-platform` (or merges a feature/fix branch into `feat/universal-platform`), run the following sequence:
+
+#### Step 1: Run Mandatory Quality Gates
+
+The GitHub Actions release pipeline ([`.github/workflows/release.yml`](.github/workflows/release.yml)) enforces Prettier formatting, ESLint, TypeScript compilation, and the full Vitest suite before publishing a release. Always run all 5 commands locally first:
+
+```bash
+npm run format
+npm run lint
+npm run format:check
+npm run build
+npm test
+```
+
+#### Step 2: Commit & Push to `feat/universal-platform`
+
+Ensure the working tree is completely clean and pushed to `origin`:
+
+```bash
+git add -A
+git commit -m "feat: <describe your change>"
+git push origin feat/universal-platform
+```
+
+#### Step 3: Cut & Push the Release Tag via `./script/tag-release`
+
+Use [`./script/tag-release`](script/tag-release) to bump `package.json` & `package-lock.json`, create the git tag, and push both the commit and tag to `origin`:
+
+```bash
+# Non-interactive mode (recommended for AI Agents / CI):
+./script/tag-release v1.0.1-universal.1 -y
+
+# Interactive mode (prompts y/N confirmation):
+./script/tag-release v1.0.1-universal.1
+```
+
+**What happens automatically when `./script/tag-release` pushes a `v*` tag:**
+
+1. Updates `"version"` in `package.json` and `package-lock.json` and creates commit `"Release <version>"`.
+2. Creates git tag `v<version>` and pushes the branch and tag to `origin`.
+3. Triggers [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub Actions, which:
+   - Runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run build`, and `npm test`.
+   - Packages `dist/`, `package.json`, `package-lock.json`, `README.md`, and `LICENSE` into `aic-mcp-server-<tag>.tar.gz` with `SHA256SUMS.txt`.
+   - Automatically publishes the GitHub Release at [`https://github.com/hyeganeh-m/aic-mcp-server/releases`](https://github.com/hyeganeh-m/aic-mcp-server/releases).
+
+#### Step 4: Rebuild Local `dist/` for Local Agents
+
+If local MCP clients (`~/.gemini/config/mcp_config.json`, `.mcp.json`, `.vscode/mcp.json`) point to `dist/index.js` in this checkout, ensure `dist/` is freshly built:
+
+```bash
+npm run build
+```
+
+### 4. Syncing Upstream Changes (`PingIdentity/aic-mcp-server` $\rightarrow$ `feat/universal-platform`)
+
+To pull new upstream commits and releases into `feat/universal-platform` without losing custom universal functionality:
+
+```bash
+# 1. Fetch upstream and sync main branch
+git fetch upstream --tags
+git branch -f main upstream/main
+git push origin main:main --tags
+
+# 2. Merge main into feat/universal-platform
+git checkout feat/universal-platform
+git merge main
+# Note: When resolving conflicts in src/tools/* or src/services/authService.ts,
+# always preserve getAmBaseUrl(), getIdmBaseUrl(), realmSchema, and Direct SSO session logic.
+
+# 3. Format, lint, build, test, and push
+npm run format && npm run lint && npm run format:check && npm run build && npm test
+git add -A && git commit -m "chore: merge upstream main"
+git push origin feat/universal-platform
+
+# 4. Tag the new universal release matching the upstream version
+./script/tag-release v<UPSTREAM_VERSION>-universal -y
+npm run build
 ```
 
 ---

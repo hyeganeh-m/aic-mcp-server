@@ -37,3 +37,14 @@ npm run format:check
 ## Testing
 
 Vitest + MSW. Tests mirror source structure under `test/tools/<category>/`. Run `npm test` to execute, `npm run test:snapshots:update` after adding/changing a tool schema.
+
+## Branching, Versioning & Release Workflow (`feat/universal-platform`)
+
+- **`main` branch**: Tracks upstream `PingIdentity/aic-mcp-server` (`upstream/main`). Do not commit custom universal changes directly to `main`.
+- **`feat/universal-platform` branch**: Contains universal PingAM/PingIDM/AIC support (Direct Admin SSO login with 3-layer keep-alive & 401 auto-recovery, dynamic `realmSchema` & `listRealms`, standalone AM mode, and `getAmBaseUrl()`/`getIdmBaseUrl()` helpers).
+- **Versioning convention**: Match upstream `<MAJOR>.<MINOR>.<PATCH>` with a `-universal` suffix (`v1.0.1-universal`, `v1.0.1-universal.1`, etc.).
+- **How to release after changes on `feat/universal-platform`**:
+  1. Run all quality gates: `npm run format && npm run lint && npm run format:check && npm run build && npm test`
+  2. Commit and push: `git add -A && git commit -m "..." && git push origin feat/universal-platform`
+  3. Cut & push release tag: `./script/tag-release v<X.Y.Z>-universal.<N> -y` (triggers `.github/workflows/release.yml` to build the release tarball and publish the GitHub Release).
+  4. Rebuild locally for local agents: `npm run build`
