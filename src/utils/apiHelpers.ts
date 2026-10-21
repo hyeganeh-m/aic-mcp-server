@@ -54,18 +54,21 @@ export async function makeAuthenticatedRequest(
     authHeaders = await getAuthService().getAuthHeader(scopes);
   }
 
-  let response: Response;
-  try {
-    response = await fetch(url, {
+  const executeFetch = async (headers: Record<string, string>) =>
+    fetch(url, {
       ...options,
       headers: {
-        ...authHeaders,
+        ...headers,
         'User-Agent': USER_AGENT,
         // Only add Content-Type header if the request has a body
         ...(options.body && { 'Content-Type': 'application/json' }),
         ...options.headers
       }
     });
+
+  let response: Response;
+  try {
+    response = await executeFetch(authHeaders);
   } catch (err: any) {
     if (isIdmRequest) {
       throw new Error(
@@ -73,7 +76,18 @@ export async function makeAuthenticatedRequest(
         'PingAM remains operational, but the IDM service is unreachable or not running.'
       );
     }
-    throw err;
+    // Retry once on transient socket error (e.g., stale keep-alive socket after inactivity)
+    response = await executeFetch(authHeaders);
+  }
+
+  // Reactive 401 recovery for Direct SSO session mode:
+  // If PingAM rejected an SSO session with 401 (e.g., idle timeout, maxSessionTime, or container restart),
+  // invalidate the cached SSO session, re-authenticate, and transparently retry the request once.
+  if (!isIdmRequest && response.status === 401 && 'iPlanetDirectoryPro' in authHeaders) {
+    console.error('PingAM SSO session returned 401 Unauthorized; re-authenticating and retrying request...');
+    getAuthService().invalidateSsoSession();
+    authHeaders = await getAuthService().getAuthHeader(scopes, { forceRefresh: true });
+    response = await executeFetch(authHeaders);
   }
 
 

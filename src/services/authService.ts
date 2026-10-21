@@ -24,6 +24,19 @@ const REDIRECT_URI = `http://localhost:${REDIRECT_URI_PORT}`;
 const CLOCK_SKEW_BUFFER_MS = 60 * 1000; // 60 seconds
 
 /**
+ * Default interval (5 minutes) for refreshing PingAM SSO sessions in the background
+ * so they never expire due to inactivity (maxIdleTime) while the MCP server is alive.
+ */
+const DEFAULT_SSO_KEEPALIVE_INTERVAL_MS = 5 * 60 * 1000;
+
+/**
+ * Proactive rotation buffer (5 minutes in seconds).
+ * When PingAM reports fewer than this many seconds remaining until hard maxSessionTime,
+ * the keep-alive heartbeat proactively mints a fresh SSO token.
+ */
+const SSO_PRE_EXPIRY_BUFFER_SECONDS = 300;
+
+/**
  * Configuration for AuthService behavior
  */
 export interface AuthServiceConfig {
@@ -45,6 +58,11 @@ class AuthService {
   private storage: TokenStorage;
   private mcpServer?: any;
   private deviceCodeVerifier?: string; // PKCE verifier for device code flow
+  private cachedSsoToken: string | null = null;
+  private ssoTokenPromise: Promise<string | null> | null = null;
+  private ssoKeepAliveTimer: ReturnType<typeof setInterval> | null = null;
+  private ssoEnvTokenInvalidated: boolean = false;
+  private lastKnownEnvSsoToken: string | undefined = undefined;
 
   constructor(allScopes: string[], config: AuthServiceConfig = {}) {
     this.allScopes = allScopes;
@@ -199,35 +217,212 @@ class AuthService {
   }
 
   /**
-   * If standalone PingAM credentials (AM_ADMIN_USERNAME / AM_ADMIN_PASSWORD) are set,
-   * acquire an admin SSO session token (iPlanetDirectoryPro).
+   * Synchronizes in-memory SSO state if process.env.SSO_TOKEN changed dynamically.
    */
-  private async getSsoSessionToken(): Promise<string | null> {
-    if (process.env.SSO_TOKEN) {
-      return process.env.SSO_TOKEN;
+  private syncEnvSsoTokenState(): void {
+    if (process.env.SSO_TOKEN !== this.lastKnownEnvSsoToken) {
+      this.lastKnownEnvSsoToken = process.env.SSO_TOKEN;
+      this.ssoEnvTokenInvalidated = false;
+      this.cachedSsoToken = process.env.SSO_TOKEN || null;
     }
-    if (process.env.AM_ADMIN_USERNAME && process.env.AM_ADMIN_PASSWORD) {
-      try {
-        const amBase = getAmBaseUrl();
-        const res = await fetch(`${amBase}/json/realms/root/authenticate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-OpenAM-Username': process.env.AM_ADMIN_USERNAME,
-            'X-OpenAM-Password': process.env.AM_ADMIN_PASSWORD
-          },
-          body: JSON.stringify({})
-        });
-        if (res.ok) {
-          const data: any = await res.json();
-          if (data && data.tokenId) {
-            return data.tokenId;
-          }
-        }
-      } catch (err) {
-        console.error('Failed to authenticate admin session against PingAM:', err);
+  }
+
+  /**
+   * Invalidates the currently cached SSO session token so the next request
+   * or background heartbeat will acquire a fresh session.
+   */
+  invalidateSsoSession(): void {
+    this.cachedSsoToken = null;
+    if (process.env.SSO_TOKEN) {
+      this.ssoEnvTokenInvalidated = true;
+    }
+  }
+
+  /**
+   * Resolves the keep-alive interval in milliseconds for SSO session refresh.
+   */
+  private getKeepAliveIntervalMs(): number {
+    const raw = process.env.AM_SESSION_KEEPALIVE_MS;
+    if (raw) {
+      const parsed = Number.parseInt(raw, 10);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
+        return parsed;
       }
     }
+    return DEFAULT_SSO_KEEPALIVE_INTERVAL_MS;
+  }
+
+  /**
+   * Starts the background unref'd timer that periodically calls PingAM's
+   * `/json/realms/root/sessions/?_action=refresh` endpoint to reset idle time (idletime = 0)
+   * and proactively rotate the session before hard maxSessionTime expiration.
+   */
+  private startSsoKeepAlive(): void {
+    if (this.ssoKeepAliveTimer) {
+      return;
+    }
+    const intervalMs = this.getKeepAliveIntervalMs();
+    if (intervalMs <= 0) {
+      return;
+    }
+    this.ssoKeepAliveTimer = setInterval(() => {
+      void this.refreshSsoSession();
+    }, intervalMs);
+    this.ssoKeepAliveTimer.unref?.();
+  }
+
+  /**
+   * Stops the background SSO keep-alive timer.
+   */
+  private stopSsoKeepAlive(): void {
+    if (this.ssoKeepAliveTimer) {
+      clearInterval(this.ssoKeepAliveTimer);
+      this.ssoKeepAliveTimer = null;
+    }
+  }
+
+  /**
+   * Refreshes the active PingAM SSO session (`?_action=refresh`) to reset the idle timer.
+   * If the session has expired (401/403) or is within `SSO_PRE_EXPIRY_BUFFER_SECONDS` of
+   * PingAM's hard `maxSessionTime` limit, proactively re-authenticates when admin credentials are set.
+   */
+  async refreshSsoSession(): Promise<boolean> {
+    if (!this.cachedSsoToken) {
+      return false;
+    }
+
+    const amBase = getAmBaseUrl();
+    try {
+      const res = await fetch(`${amBase}/json/realms/root/sessions/?_action=refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept-API-Version': 'resource=2.0, protocol=1.0',
+          'User-Agent': USER_AGENT,
+          'iPlanetDirectoryPro': this.cachedSsoToken
+        }
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          this.invalidateSsoSession();
+          if (process.env.AM_ADMIN_USERNAME && process.env.AM_ADMIN_PASSWORD) {
+            try {
+              await this.getSsoSessionToken(true);
+              return true;
+            } catch (err) {
+              console.error('Background SSO session re-authentication failed:', err);
+            }
+          }
+        }
+        return false;
+      }
+
+      const data: any = await res.json().catch(() => null);
+      if (
+        data &&
+        typeof data.maxtime === 'number' &&
+        data.maxtime < SSO_PRE_EXPIRY_BUFFER_SECONDS &&
+        process.env.AM_ADMIN_USERNAME &&
+        process.env.AM_ADMIN_PASSWORD
+      ) {
+        try {
+          await this.getSsoSessionToken(true);
+        } catch (err) {
+          console.error('Proactive SSO session rotation before maxSessionTime failed:', err);
+        }
+      }
+      return true;
+    } catch (err) {
+      console.error('Background SSO session keep-alive check failed:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Authenticates against PingAM `/json/realms/root/authenticate` using admin credentials,
+   * with a single automatic retry on transient network/socket errors after inactivity.
+   */
+  private async authenticateAdminSession(): Promise<string> {
+    const amBase = getAmBaseUrl();
+    const authUrl = `${amBase}/json/realms/root/authenticate`;
+    const requestInit: RequestInit = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-API-Version': 'resource=2.0, protocol=1.0',
+        'User-Agent': USER_AGENT,
+        'X-OpenAM-Username': process.env.AM_ADMIN_USERNAME!,
+        'X-OpenAM-Password': process.env.AM_ADMIN_PASSWORD!
+      },
+      body: JSON.stringify({})
+    };
+
+    let res: Response;
+    try {
+      res = await fetch(authUrl, requestInit);
+    } catch (firstErr) {
+      // Retry once if a stale keep-alive socket closed during inactivity
+      res = await fetch(authUrl, requestInit);
+    }
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '');
+      throw new Error(`PingAM admin authentication failed (${res.status} ${res.statusText}): ${errorText}`);
+    }
+
+    const data: any = await res.json();
+    if (!data || !data.tokenId) {
+      throw new Error('PingAM admin authentication response did not contain a tokenId');
+    }
+
+    this.cachedSsoToken = data.tokenId;
+    this.startSsoKeepAlive();
+    return data.tokenId;
+  }
+
+  /**
+   * If standalone PingAM credentials (AM_ADMIN_USERNAME / AM_ADMIN_PASSWORD) or SSO_TOKEN are set,
+   * acquire or reuse a cached admin SSO session token (iPlanetDirectoryPro).
+   */
+  private async getSsoSessionToken(forceRefresh: boolean = false): Promise<string | null> {
+    this.syncEnvSsoTokenState();
+
+    if (forceRefresh) {
+      this.invalidateSsoSession();
+    }
+
+    if (this.cachedSsoToken) {
+      this.startSsoKeepAlive();
+      return this.cachedSsoToken;
+    }
+
+    if (process.env.SSO_TOKEN && !this.ssoEnvTokenInvalidated) {
+      this.cachedSsoToken = process.env.SSO_TOKEN;
+      this.startSsoKeepAlive();
+      return this.cachedSsoToken;
+    }
+
+    if (process.env.AM_ADMIN_USERNAME && process.env.AM_ADMIN_PASSWORD) {
+      if (this.ssoTokenPromise) {
+        return this.ssoTokenPromise;
+      }
+
+      this.ssoTokenPromise = this.authenticateAdminSession();
+      try {
+        return await this.ssoTokenPromise;
+      } finally {
+        this.ssoTokenPromise = null;
+      }
+    }
+
+    if (process.env.SSO_TOKEN && this.ssoEnvTokenInvalidated) {
+      throw new Error(
+        'The configured SSO_TOKEN has expired or been invalidated by PingAM (401 Unauthorized). ' +
+        'Configure AM_ADMIN_USERNAME and AM_ADMIN_PASSWORD so the MCP server can automatically re-authenticate when sessions expire.'
+      );
+    }
+
     return null;
   }
 
@@ -236,8 +431,8 @@ class AuthService {
    * Uses SSO session token (iPlanetDirectoryPro) if standalone PingAM admin credentials exist,
    * otherwise uses the OAuth2 Bearer token (via PKCE and token exchange).
    */
-  async getAuthHeader(scopes: string[]): Promise<Record<string, string>> {
-    const ssoToken = await this.getSsoSessionToken();
+  async getAuthHeader(scopes: string[], options: { forceRefresh?: boolean } = {}): Promise<Record<string, string>> {
+    const ssoToken = await this.getSsoSessionToken(options.forceRefresh);
     if (ssoToken) {
       return { 'iPlanetDirectoryPro': ssoToken };
     }
@@ -323,10 +518,11 @@ class AuthService {
   }
 
   /**
-   * Cleanup resources (e.g., HTTP server for redirect)
+   * Cleanup resources (e.g., HTTP server for redirect, SSO keep-alive timer)
    * Safe to call multiple times
    */
   cleanup(): void {
+    this.stopSsoKeepAlive();
     if (this.redirectServer) {
       try {
         this.redirectServer.close();
@@ -347,6 +543,9 @@ let instance: AuthService;
  * @param config - Optional configuration for AuthService behavior
  */
 export function initAuthService(allScopes: string[], config: AuthServiceConfig = {}): void {
+  if (instance) {
+    instance.cleanup();
+  }
   instance = new AuthService(allScopes, config);
 }
 
