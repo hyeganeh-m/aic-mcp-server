@@ -83,13 +83,16 @@ export async function makeAuthenticatedRequest(
   }
 
   // Reactive 401 recovery for Direct SSO session mode:
-  // If PingAM rejected an SSO session with 401 (e.g., idle timeout, maxSessionTime, or container restart),
-  // invalidate the cached SSO session, re-authenticate, and transparently retry the request once.
+  // If PingAM rejected an SSO session with 401 (e.g., idle timeout, maxSessionTime, custom cookieName, or root journey mismatch),
+  // invalidate the cached SSO session, re-authenticate (discovering custom cookieName and trying ldapService), and retry once.
   if (!isIdmRequest && response.status === 401 && 'iPlanetDirectoryPro' in authHeaders) {
-    console.error('PingAM SSO session returned 401 Unauthorized; re-authenticating and retrying request...');
+    console.error(`PingAM SSO session returned 401 Unauthorized for ${url}; re-authenticating and retrying request...`);
     getAuthService().invalidateSsoSession();
     authHeaders = await getAuthService().getAuthHeader(scopes, { forceRefresh: true });
     response = await executeFetch(authHeaders);
+    if (response.ok) {
+      console.error(`PingAM SSO session re-authenticated successfully; retry for ${url} succeeded.`);
+    }
   }
 
   if (!response.ok) {

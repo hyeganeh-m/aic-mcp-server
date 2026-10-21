@@ -257,5 +257,68 @@ describe('SSO Session Caching, Keep-Alive Heartbeat & 401 Auto-Recovery', () => 
       expect(data).toEqual({ result: [{ name: '/' }] });
       expect(authCalls).toBe(1);
     });
+
+    it('discovers custom PingAM cookieName from /json/serverinfo/* on 401 retry and succeeds', async () => {
+      let authCalls = 0;
+      server.use(
+        http.post('http://am.ping.local:8080/am/json/realms/root/authenticate', () => {
+          authCalls++;
+          return HttpResponse.json({ tokenId: `custom-cookie-token-${authCalls}` });
+        }),
+        http.get('http://am.ping.local:8080/am/json/serverinfo/*', () => {
+          return HttpResponse.json({ cookieName: 'CustomAMSession' });
+        }),
+        http.get('http://am.ping.local:8080/am/json/global-config/realms', ({ request }) => {
+          // Server only accepts CustomAMSession header, rejecting iPlanetDirectoryPro alone with 401
+          const customToken = request.headers.get('CustomAMSession');
+          if (!customToken) {
+            return new HttpResponse(JSON.stringify({ code: 401, message: 'Access Denied' }), { status: 401 });
+          }
+          return HttpResponse.json({ result: [{ name: '/' }] });
+        })
+      );
+
+      const { data, response } = await makeAuthenticatedRequest(
+        'http://am.ping.local:8080/am/json/global-config/realms?_queryFilter=true',
+        ['fr:am:*']
+      );
+
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ result: [{ name: '/' }] });
+      expect(authCalls).toBe(2);
+    });
+
+    it('completes callback-based authentication when zero-page login is disabled on PingAM', async () => {
+      server.use(
+        http.post('http://am.ping.local:8080/am/json/realms/root/authenticate', async ({ request }) => {
+          const body: any = await request.json();
+          if (!body.authId) {
+            return HttpResponse.json({
+              authId: 'callback-auth-id',
+              callbacks: [
+                {
+                  type: 'NameCallback',
+                  output: [{ name: 'prompt', value: 'User Name' }],
+                  input: [{ name: 'IDToken1', value: '' }],
+                  _id: 0
+                },
+                {
+                  type: 'PasswordCallback',
+                  output: [{ name: 'prompt', value: 'Password' }],
+                  input: [{ name: 'IDToken2', value: '' }],
+                  _id: 1
+                }
+              ]
+            });
+          }
+          expect(body.callbacks[0].input[0].value).toBe('amadmin');
+          expect(body.callbacks[1].input[0].value).toBe('test-admin-password');
+          return HttpResponse.json({ tokenId: 'callback-minted-sso-token' });
+        })
+      );
+
+      const header = await getAuthService().getAuthHeader(['fr:am:*']);
+      expect(header).toEqual({ iPlanetDirectoryPro: 'callback-minted-sso-token' });
+    });
   });
 });

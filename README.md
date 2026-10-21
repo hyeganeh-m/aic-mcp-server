@@ -143,12 +143,13 @@ agy "Use ping-platform MCP to list all journeys in the customers realm"
 
 VS Code supports Model Context Protocol (MCP) servers for GitHub Copilot Chat through `.vscode/mcp.json` (workspace scope) or user-level settings.
 
-Create or update `.vscode/mcp.json` in your repository root:
+Create or update `.vscode/mcp.json` (workspace) or `~/Library/Application Support/Code/User/mcp.json` (macOS User settings) — note that **VS Code uses `"servers"`** as the root key:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "ping-platform": {
+      "type": "stdio",
       "command": "node",
       "args": ["/path/to/aic-mcp-server/dist/index.js"],
       "env": {

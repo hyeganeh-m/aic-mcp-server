@@ -58,6 +58,7 @@ class AuthService {
   private mcpServer?: any;
   private deviceCodeVerifier?: string; // PKCE verifier for device code flow
   private cachedSsoToken: string | null = null;
+  private ssoCookieName: string = 'iPlanetDirectoryPro';
   private ssoTokenPromise: Promise<string | null> | null = null;
   private ssoKeepAliveTimer: ReturnType<typeof setInterval> | null = null;
   private ssoEnvTokenInvalidated: boolean = false;
@@ -291,6 +292,7 @@ class AuthService {
     }
 
     const amBase = getAmBaseUrl();
+    const cookieHeaderName = this.getEffectiveSsoCookieName();
     try {
       const res = await fetch(`${amBase}/json/realms/root/sessions/?_action=refresh`, {
         method: 'POST',
@@ -298,7 +300,8 @@ class AuthService {
           'Content-Type': 'application/json',
           'Accept-API-Version': 'resource=2.0, protocol=1.0',
           'User-Agent': USER_AGENT,
-          iPlanetDirectoryPro: this.cachedSsoToken
+          iPlanetDirectoryPro: this.cachedSsoToken,
+          ...(cookieHeaderName !== 'iPlanetDirectoryPro' && { [cookieHeaderName]: this.cachedSsoToken })
         }
       });
 
@@ -339,12 +342,74 @@ class AuthService {
   }
 
   /**
-   * Authenticates against PingAM `/json/realms/root/authenticate` using admin credentials,
-   * with a single automatic retry on transient network/socket errors after inactivity.
+   * Returns the effective PingAM session cookie/header name.
+   * Respects AM_COOKIE_NAME if configured, or any custom cookieName auto-detected from PingAM.
    */
-  private async authenticateAdminSession(): Promise<string> {
-    const amBase = getAmBaseUrl();
-    const authUrl = `${amBase}/json/realms/root/authenticate`;
+  private getEffectiveSsoCookieName(): string {
+    return process.env.AM_COOKIE_NAME?.trim() || this.ssoCookieName || 'iPlanetDirectoryPro';
+  }
+
+  /**
+   * Inspects Set-Cookie headers from `/authenticate` to detect if PingAM is configured
+   * with a custom session cookie name (e.g., instead of `iPlanetDirectoryPro`).
+   */
+  private detectCookieNameFromResponse(res: Response, tokenId: string): void {
+    try {
+      const setCookies: string[] =
+        typeof (res.headers as any).getSetCookie === 'function'
+          ? (res.headers as any).getSetCookie()
+          : res.headers.get('set-cookie')
+            ? [res.headers.get('set-cookie')!]
+            : [];
+
+      for (const rawCookie of setCookies) {
+        const firstPair = rawCookie.split(';')[0]?.trim();
+        if (!firstPair) continue;
+        const eqIdx = firstPair.indexOf('=');
+        if (eqIdx <= 0) continue;
+        const name = firstPair.slice(0, eqIdx).trim();
+        const val = firstPair
+          .slice(eqIdx + 1)
+          .trim()
+          .replace(/^"|"$/g, '');
+        if (name && val === tokenId) {
+          this.ssoCookieName = name;
+          return;
+        }
+      }
+    } catch {
+      // Ignore header parsing errors
+    }
+  }
+
+  /**
+   * Queries `/json/serverinfo/*` to discover a custom `cookieName` when a 401 retry occurs.
+   */
+  private async discoverServerCookieName(amBase: string): Promise<void> {
+    try {
+      const res = await fetch(`${amBase}/json/serverinfo/*`, {
+        method: 'GET',
+        headers: {
+          'Accept-API-Version': 'resource=1.1, protocol=1.0',
+          'User-Agent': USER_AGENT
+        }
+      });
+      if (res.ok) {
+        const info: any = await res.json().catch(() => null);
+        if (info && typeof info.cookieName === 'string' && info.cookieName.trim()) {
+          this.ssoCookieName = info.cookieName.trim();
+        }
+      }
+    } catch {
+      // Best-effort discovery; ignore errors
+    }
+  }
+
+  /**
+   * Executes a single authentication attempt against the given PingAM authenticate URL,
+   * automatically completing NameCallback / PasswordCallback if zero-page login is disabled.
+   */
+  private async attemptAdminAuthEndpoint(authUrl: string): Promise<{ res: Response; data: any }> {
     const requestInit: RequestInit = {
       method: 'POST',
       headers: {
@@ -366,18 +431,89 @@ class AuthService {
     }
 
     if (!res.ok) {
-      const errorText = await res.text().catch(() => '');
-      throw new Error(`PingAM admin authentication failed (${res.status} ${res.statusText}): ${errorText}`);
+      return { res, data: null };
     }
 
-    const data: any = await res.json();
-    if (!data || !data.tokenId) {
+    const data: any = await res.json().catch(() => null);
+
+    // If PingAM returned an interactive callback challenge (e.g., zero-page login headers disabled),
+    // populate NameCallback and PasswordCallback and submit to obtain tokenId.
+    if (data && !data.tokenId && data.authId && Array.isArray(data.callbacks)) {
+      const filledCallbacks = data.callbacks.map((cb: any) => {
+        if (cb.type === 'NameCallback' && Array.isArray(cb.input) && cb.input[0]) {
+          return { ...cb, input: [{ ...cb.input[0], value: process.env.AM_ADMIN_USERNAME! }] };
+        }
+        if (cb.type === 'PasswordCallback' && Array.isArray(cb.input) && cb.input[0]) {
+          return { ...cb, input: [{ ...cb.input[0], value: process.env.AM_ADMIN_PASSWORD! }] };
+        }
+        return cb;
+      });
+
+      const callbackRes = await fetch(authUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept-API-Version': 'resource=2.0, protocol=1.0',
+          'User-Agent': USER_AGENT
+        },
+        body: JSON.stringify({
+          authId: data.authId,
+          callbacks: filledCallbacks
+        })
+      });
+
+      if (callbackRes.ok) {
+        const callbackData: any = await callbackRes.json().catch(() => null);
+        return { res: callbackRes, data: callbackData };
+      }
+      return { res: callbackRes, data: null };
+    }
+
+    return { res, data };
+  }
+
+  /**
+   * Authenticates against PingAM `/json/realms/root/authenticate` using admin credentials,
+   * with fallback to `ldapService` (`?authIndexType=service&authIndexValue=ldapService`)
+   * when root's default journey has been customized or when recovering from a 401 error.
+   */
+  private async authenticateAdminSession(preferLdapService: boolean = false): Promise<string> {
+    const amBase = getAmBaseUrl();
+    const defaultAuthUrl = `${amBase}/json/realms/root/authenticate`;
+    const ldapServiceAuthUrl = `${amBase}/json/realms/root/authenticate?authIndexType=service&authIndexValue=ldapService`;
+
+    if (preferLdapService) {
+      await this.discoverServerCookieName(amBase);
+    }
+
+    const urlsToTry = preferLdapService ? [ldapServiceAuthUrl, defaultAuthUrl] : [defaultAuthUrl, ldapServiceAuthUrl];
+    let lastRes: Response | null = null;
+    let lastData: any = null;
+
+    for (const url of urlsToTry) {
+      const { res, data } = await this.attemptAdminAuthEndpoint(url);
+      lastRes = res;
+      lastData = data;
+      if (res.ok && data && data.tokenId) {
+        this.detectCookieNameFromResponse(res, data.tokenId);
+        this.cachedSsoToken = data.tokenId;
+        this.startSsoKeepAlive();
+        return data.tokenId;
+      }
+      // If standard auth failed with 401 (bad credentials) on default endpoint and we aren't preferring ldapService,
+      // only fall back to ldapService if the root realm might be using a non-admin tree.
+    }
+
+    if (lastRes && !lastRes.ok) {
+      const errorText = await lastRes.text().catch(() => '');
+      throw new Error(`PingAM admin authentication failed (${lastRes.status} ${lastRes.statusText}): ${errorText}`);
+    }
+
+    if (!lastData || !lastData.tokenId) {
       throw new Error('PingAM admin authentication response did not contain a tokenId');
     }
 
-    this.cachedSsoToken = data.tokenId;
-    this.startSsoKeepAlive();
-    return data.tokenId;
+    return lastData.tokenId;
   }
 
   /**
@@ -407,7 +543,7 @@ class AuthService {
         return this.ssoTokenPromise;
       }
 
-      this.ssoTokenPromise = this.authenticateAdminSession();
+      this.ssoTokenPromise = this.authenticateAdminSession(forceRefresh);
       try {
         return await this.ssoTokenPromise;
       } finally {
@@ -427,12 +563,20 @@ class AuthService {
 
   /**
    * Returns the appropriate authorization headers for PingAM requests.
-   * Uses SSO session token (iPlanetDirectoryPro) if standalone PingAM admin credentials exist,
-   * otherwise uses the OAuth2 Bearer token (via PKCE and token exchange).
+   * Uses SSO session token (iPlanetDirectoryPro + any custom PingAM cookieName) if standalone
+   * PingAM admin credentials exist, otherwise uses the OAuth2 Bearer token (via PKCE and token exchange).
    */
   async getAuthHeader(scopes: string[], options: { forceRefresh?: boolean } = {}): Promise<Record<string, string>> {
     const ssoToken = await this.getSsoSessionToken(options.forceRefresh);
     if (ssoToken) {
+      const cookieHeaderName = this.getEffectiveSsoCookieName();
+      if (cookieHeaderName !== 'iPlanetDirectoryPro') {
+        return {
+          iPlanetDirectoryPro: ssoToken,
+          [cookieHeaderName]: ssoToken,
+          Cookie: `${cookieHeaderName}=${ssoToken}; iPlanetDirectoryPro=${ssoToken}`
+        };
+      }
       return { iPlanetDirectoryPro: ssoToken };
     }
 
