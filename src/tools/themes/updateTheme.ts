@@ -4,8 +4,6 @@ import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHel
 import { formatSuccess } from '../../utils/responseHelpers.js';
 import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
-
 const SCOPES = ['fr:idm:*'];
 
 export const updateThemeTool = {

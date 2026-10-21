@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
-
 const SCOPES = ['fr:idm:*'];
 
 // ForgeRock PATCH operation schema

@@ -1,6 +1,6 @@
 {
   "name": "ping-platform-mcp-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Universal Model Context Protocol (MCP) server for Ping Identity platforms (PingAM, PingIDM, and PingOne Advanced Identity Cloud)",
   "main": "dist/index.js",
   "bin": {

@@ -6,7 +6,6 @@ import { realmSchema } from '../../utils/validationHelpers.js';
 
 import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
 const SCOPES = ['fr:idm:*'];
 
 export const listOidcAppsTool = {
@@ -31,12 +30,11 @@ export const listOidcAppsTool = {
     try {
       const filter = queryFilter || 'true';
       const isStandaloneAm = Boolean(
-        !process.env.IDM_BASE_URL &&
-        (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
+        !process.env.IDM_BASE_URL && (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
       );
 
       let url: string;
-      let scopes = SCOPES;
+      const scopes = SCOPES;
       let headers: Record<string, string> = {};
 
       if (isStandaloneAm) {

@@ -12,7 +12,6 @@ import { randomUUID } from 'crypto';
 import { makeAuthenticatedRequest } from './apiHelpers.js';
 import { getAmBaseUrl } from './urlHelpers.js';
 
-
 /**
  * Standard headers for AM API requests (protocol 2.1, resource 1.0).
  * Used for journey and node operations.
@@ -165,9 +164,8 @@ export interface ConfigResult {
  */
 export function buildAMRealmUrl(realm: string, path: string): string {
   const amBase = getAmBaseUrl();
-  const realmPath = realm === 'root' ? '' : `realms/${realm}/`;
   // If realm is not 'root' and doesn't already prefix realms/, format appropriately
-  const effectiveRealm = realm === 'root' ? '' : (realm.startsWith('/') ? realm.slice(1) : realm);
+  const effectiveRealm = realm === 'root' ? '' : realm.startsWith('/') ? realm.slice(1) : realm;
   return `${amBase}/json/${effectiveRealm ? effectiveRealm + '/' : ''}${path}`;
 }
 
@@ -183,7 +181,6 @@ export function buildAMGlobalConfigUrl(serviceName: string, path?: string): stri
   const base = `${amBase}/json/global-config/services/${serviceName}/configuration`;
   return path ? `${base}/${path}` : base;
 }
-
 
 /**
  * Builds a URL for a specific AM authentication journey (tree) resource.

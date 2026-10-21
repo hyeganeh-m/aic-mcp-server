@@ -5,7 +5,6 @@ import { formatSuccess } from '../../utils/responseHelpers.js';
 import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
 const SCOPES = ['fr:am:*', 'fr:idm:*'];
 
 function summarizeAmSchema(schema: Record<string, any>): Record<string, any> {

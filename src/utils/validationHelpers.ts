@@ -9,14 +9,7 @@
 import { z } from 'zod';
 
 // Known baseline realms (kept for backward compatibility and references)
-export const REALMS = [
-  'customers',
-  'employees',
-  'service-accounts',
-  'root',
-  'alpha',
-  'bravo'
-] as const;
+export const REALMS = ['customers', 'employees', 'service-accounts', 'root', 'alpha', 'bravo'] as const;
 
 /**
  * Validates that a value is safe to use as a realm name.
@@ -45,7 +38,6 @@ export const realmSchema = z
   .refine(isValidRealm, {
     message: 'Realm name must not contain path traversal characters (.., \\) or multiple path separators'
   });
-
 
 /**
  * Validates that a value is safe to use in a URL path segment.

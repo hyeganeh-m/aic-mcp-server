@@ -1,8 +1,6 @@
 import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
-
 const SCOPES = ['fr:idm:*'];
 
 export const listManagedObjectsTool = {

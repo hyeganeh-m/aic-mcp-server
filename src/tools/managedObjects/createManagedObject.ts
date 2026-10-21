@@ -3,9 +3,7 @@ import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
 import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
-import { EXAMPLE_TYPES_STRING } from '../../utils/managedObjectHelpers.js';
-
-const aicBaseUrl = process.env.AIC_BASE_URL;
+import { EXAMPLE_TYPES_STRING, managedObjectTypeSchema } from '../../utils/managedObjectHelpers.js';
 
 const SCOPES = ['fr:idm:*'];
 
@@ -19,18 +17,15 @@ export const createManagedObjectTool = {
     openWorldHint: true
   },
   inputSchema: {
-    objectType: z
-      .string()
-      .min(1)
-      .describe(
-        `Managed object type (e.g., ${EXAMPLE_TYPES_STRING}). Use listManagedObjects to discover all available types.`
-      ),
+    objectType: managedObjectTypeSchema.describe(
+      `Managed object type (e.g., ${EXAMPLE_TYPES_STRING}). Use listManagedObjects to discover all available types.`
+    ),
     objectData: z
       .record(z.any())
       .describe('JSON object containing object properties (must include all required fields from the schema)')
   },
   async toolFunction({ objectType, objectData }: { objectType: string; objectData: Record<string, any> }) {
-    const url = `${getIdmBaseUrl()}/managed/${objectType}?_action=create`;
+    const url = `${getIdmBaseUrl()}/managed/${encodeURIComponent(objectType)}?_action=create`;
 
     try {
       const { data, response } = await makeAuthenticatedRequest(url, SCOPES, {

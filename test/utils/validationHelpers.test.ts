@@ -3,7 +3,6 @@ import {
   isValidPathSegment,
   safePathSegmentSchema,
   featureNameSchema,
-  isValidRealm,
   realmSchema,
   REALMS
 } from '../../src/utils/validationHelpers.js';
@@ -155,14 +154,11 @@ describe('validationHelpers', () => {
       expect(() => realmSchema.parse('   ')).toThrow();
     });
 
-    it.each([
-      '../etc',
-      'foo/bar/baz',
-      'realm\\bad',
-      '%2e%2e'
-    ])('should reject path traversal in realm: "%s"', (realm) => {
-      expect(() => realmSchema.parse(realm)).toThrow();
-    });
+    it.each(['../etc', 'foo/bar/baz', 'realm\\bad', '%2e%2e'])(
+      'should reject path traversal in realm: "%s"',
+      (realm) => {
+        expect(() => realmSchema.parse(realm)).toThrow();
+      }
+    );
   });
 });
-

@@ -58,6 +58,7 @@ aic-mcp-server/
 
 > 💡 **Find Your System's Absolute Path**:
 > Run this command inside the cloned repository to print the exact path for your system:
+>
 > ```bash
 > echo "$(pwd)/dist/index.js"
 > # macOS example:   /Users/<your-username>/projects/aic-mcp-server/dist/index.js
@@ -70,6 +71,7 @@ aic-mcp-server/
 ### 2. Configure for Your AI Tool
 
 #### A. Gemini CLI / Antigravity CLI (`agy`)
+
 Antigravity and `agy` discover global MCP servers from `~/.gemini/config/mcp_config.json`. Add the server to the `mcpServers` object:
 
 ```json
@@ -77,9 +79,7 @@ Antigravity and `agy` discover global MCP servers from `~/.gemini/config/mcp_con
   "mcpServers": {
     "ping-platform": {
       "command": "node",
-      "args": [
-        "/path/to/aic-mcp-server/dist/index.js"
-      ],
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
       "env": {
         "AM_BASE_URL": "http://am.ping.local:8080/am",
         "IDM_BASE_URL": "http://localhost:8082/openidm",
@@ -95,6 +95,7 @@ Antigravity and `agy` discover global MCP servers from `~/.gemini/config/mcp_con
 ```
 
 **Test with `agy`:**
+
 ```bash
 agy "Use ping-platform MCP to list all journeys in the customers realm"
 ```
@@ -102,6 +103,7 @@ agy "Use ping-platform MCP to list all journeys in the customers realm"
 ---
 
 #### B. GitHub Copilot (VS Code Extension / Plugin)
+
 VS Code supports Model Context Protocol (MCP) servers for GitHub Copilot Chat through `.vscode/mcp.json` (workspace scope) or user-level settings.
 
 Create or update `.vscode/mcp.json` in your repository root:
@@ -111,9 +113,7 @@ Create or update `.vscode/mcp.json` in your repository root:
   "mcpServers": {
     "ping-platform": {
       "command": "node",
-      "args": [
-        "/path/to/aic-mcp-server/dist/index.js"
-      ],
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
       "env": {
         "AM_BASE_URL": "http://am.ping.local:8080/am",
         "IDM_BASE_URL": "http://localhost:8082/openidm",
@@ -130,14 +130,17 @@ Create or update `.vscode/mcp.json` in your repository root:
 
 **Test in GitHub Copilot Chat:**
 Open the Copilot Chat panel in VS Code (`Cmd + Shift + I` or `Ctrl + Shift + I`) and prompt:
-> *"@workspace Use the ping-platform tool to list all authentication journeys in the customers realm."*
+
+> _"@workspace Use the ping-platform tool to list all authentication journeys in the customers realm."_
 
 ---
 
 #### C. GitHub Copilot CLI (`copilot-cli` / `gh copilot`)
+
 GitHub Copilot CLI supports MCP servers defined either at the project level (within a repository) or globally for all CLI sessions.
 
 ##### Option 1: Project-Level Configuration (`.mcp.json`)
+
 Create a `.mcp.json` file in your repository root:
 
 ```json
@@ -146,9 +149,7 @@ Create a `.mcp.json` file in your repository root:
     "ping-platform": {
       "type": "stdio",
       "command": "node",
-      "args": [
-        "/path/to/aic-mcp-server/dist/index.js"
-      ],
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
       "env": {
         "AM_BASE_URL": "http://am.ping.local:8080/am",
         "IDM_BASE_URL": "http://localhost:8082/openidm",
@@ -164,16 +165,20 @@ Create a `.mcp.json` file in your repository root:
 ```
 
 ##### Option 2: Global User Configuration (`~/.copilot/mcp-config.json`)
+
 To make the Ping Platform tools available across all repositories in Copilot CLI, create or edit `~/.copilot/mcp-config.json` with the same JSON structure above.
 
 ##### Option 3: Interactive CLI Command
+
 You can also register the server interactively within the Copilot CLI prompt:
+
 ```bash
 /mcp add ping-platform node /path/to/aic-mcp-server/dist/index.js
 ```
 
 **Test in Copilot CLI:**
 Run Copilot CLI and ask:
+
 ```bash
 copilot
 > List all available realms in my PingAM instance
@@ -182,6 +187,7 @@ copilot
 ---
 
 #### D. Claude Desktop
+
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
@@ -189,9 +195,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "ping-platform": {
       "command": "node",
-      "args": [
-        "/path/to/aic-mcp-server/dist/index.js"
-      ],
+      "args": ["/path/to/aic-mcp-server/dist/index.js"],
       "env": {
         "AM_BASE_URL": "http://am.ping.local:8080/am",
         "IDM_BASE_URL": "http://localhost:8082/openidm",
@@ -209,7 +213,9 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 ---
 
 #### E. Cursor IDE
+
 Add to `.cursor/mcp.json` or open **Cursor Settings > Features > MCP**:
+
 - **Name**: `ping-platform`
 - **Type**: `command`
 - **Command**: `node /path/to/aic-mcp-server/dist/index.js`
@@ -222,14 +228,17 @@ Add to `.cursor/mcp.json` or open **Cursor Settings > Features > MCP**:
 Never commit administrative passwords to public repositories or unencrypted configuration files. Use one of the following recommended methods:
 
 ### Option 1: Zero-Credentials Interactive Flow (Recommended)
-You do not need to store admin usernames or passwords in configuration files! 
+
+You do not need to store admin usernames or passwords in configuration files!
 If `AM_ADMIN_PASSWORD` is omitted, the MCP server automatically initiates an interactive **OAuth 2.0 Authorization Code Flow with PKCE**:
+
 1. Starts a local loopback listener on `http://localhost:3000`.
 2. Prompts you in your default web browser to log in through your realm's authentication journey.
 3. Upon successful login, the session token is securely stored in your operating system's native keychain (macOS Keychain, Windows Credential Manager, or Linux Secret Service / Keyring).
 4. No plaintext passwords are ever written to configuration files.
 
 ### Option 2: Environment Variable Expansion & Secrets Injection
+
 Keep credentials out of static `.json` configuration files by injecting environment variables:
 
 ```bash
@@ -238,6 +247,7 @@ export IDM_ADMIN_PASSWORD="<your-strong-password>"
 ```
 
 In tools that support environment variable expansion, reference them directly:
+
 ```json
 {
   "env": {
@@ -248,11 +258,13 @@ In tools that support environment variable expansion, reference them directly:
 ```
 
 Or inject at runtime via enterprise secret tools (e.g. 1Password CLI, Doppler, Vault):
+
 ```bash
 op run --env-file=.env -- agy "List journeys"
 ```
 
 ### Option 3: Generating Cryptographically Strong Passwords
+
 When provisioning administrator accounts for PingAM (`amadmin`) or PingIDM (`openidm-admin`), generate random, high-entropy passwords rather than using static strings:
 
 - **OpenSSL (Cross-Platform)**:
@@ -282,15 +294,16 @@ The MCP server connects to any Ping Identity deployment topology: **Local Docker
 
 Understanding how authentication works clarifies why **no OAuth2 clients or custom users are needed** for standard deployments:
 
-| Authentication Mode | Deployment Targets | OAuth2 Client Needed in PingAM? | Custom Users Required? | How It Works |
-| :--- | :--- | :---: | :---: | :--- |
-| **Direct Admin SSO (Recommended)** | Local Docker, Remote On-Prem, Standalone PingAM | ❌ **No Client Needed** | ❌ **No (uses built-in `amadmin`)** | Directly authenticates via CREST `/json/realms/root/authenticate` to acquire an `iPlanetDirectoryPro` administrative session token. Zero OAuth client configuration. |
-| **Interactive Browser PKCE** | Workstations targeting PingAM with browser | ✅ Yes (`AICMCPClient` on `localhost:3000`) | ❌ No (logs in as `amadmin` or realm admin) | Opens default browser, executes target realm journey, caches session in native OS Keychain. |
-| **Cloud Gateway Mode** | PingOne AIC (`*.forgeblocks.com`) | ❌ Pre-configured in cloud | ❌ Uses Tenant Cloud Admin | Authenticates via cloud gateway and down-scopes tokens via RFC 8693 token exchange. |
+| Authentication Mode                | Deployment Targets                              |       OAuth2 Client Needed in PingAM?       |           Custom Users Required?            | How It Works                                                                                                                                                         |
+| :--------------------------------- | :---------------------------------------------- | :-----------------------------------------: | :-----------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Direct Admin SSO (Recommended)** | Local Docker, Remote On-Prem, Standalone PingAM |           ❌ **No Client Needed**           |     ❌ **No (uses built-in `amadmin`)**     | Directly authenticates via CREST `/json/realms/root/authenticate` to acquire an `iPlanetDirectoryPro` administrative session token. Zero OAuth client configuration. |
+| **Interactive Browser PKCE**       | Workstations targeting PingAM with browser      | ✅ Yes (`AICMCPClient` on `localhost:3000`) | ❌ No (logs in as `amadmin` or realm admin) | Opens default browser, executes target realm journey, caches session in native OS Keychain.                                                                          |
+| **Cloud Gateway Mode**             | PingOne AIC (`*.forgeblocks.com`)               |         ❌ Pre-configured in cloud          |         ❌ Uses Tenant Cloud Admin          | Authenticates via cloud gateway and down-scopes tokens via RFC 8693 token exchange.                                                                                  |
 
 ---
 
 ### 1. Topology 1: Standalone PingAM (No PingIDM at All)
+
 Use this setup when you have PingAM running with CTS (Core Token Service) and an Identity Repository (OpenDJ, Active Directory, or OpenLDAP), but **no PingIDM service**.
 
 - **OAuth2 Client Required?**: **NO.**
@@ -317,6 +330,7 @@ Use this setup when you have PingAM running with CTS (Core Token Service) and an
 ---
 
 ### 2. Topology 2: PingAM + PingIDM (Local Docker Stack)
+
 Use this setup when running both PingAM and PingIDM in Docker Compose (e.g. `am.ping.local:8080/am` and `localhost:8082/openidm`).
 
 - **OAuth2 Client Required?**: **NO.** Both services use direct administrative authentication.
@@ -351,6 +365,7 @@ Use this setup when running both PingAM and PingIDM in Docker Compose (e.g. `am.
 ---
 
 ### 3. Topology 3: Remote Enterprise PingAM & IDM (Dev, Staging, or Production)
+
 Use this setup when connecting your AI tools to enterprise servers deployed in your data center, AWS, Azure, or GCP.
 
 - **OAuth2 Client Required?**: **NO.** Works directly against the remote CREST APIs.
@@ -382,6 +397,7 @@ Use this setup when connecting your AI tools to enterprise servers deployed in y
 ---
 
 ### 4. Topology 4: PingOne Advanced Identity Cloud (AIC)
+
 Use this setup when managing an official Ping Identity cloud tenant.
 
 - **OAuth2 Client Required?**: Pre-configured by PingOne AIC cloud gateway.
@@ -405,6 +421,7 @@ Use this setup when managing an official Ping Identity cloud tenant.
 ---
 
 ### 5. Configuring an OAuth2 Client for Interactive PKCE (Optional)
+
 If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead want an interactive browser popup on your local or remote PingAM instance, configure an OAuth2 client in PingAM:
 
 1. **Realm**: Select your administration realm (e.g. `/` or `/customers`).
@@ -414,22 +431,23 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 5. **Scopes**: `openid`, `profile`, `am-admin` (or realm management scopes)
 6. **Grant Types**: `authorization_code` with PKCE enabled.
 
-*(Note: If you use `AM_ADMIN_USERNAME` and `AM_ADMIN_PASSWORD` direct SSO session mode, this step is completely unnecessary!)*
+_(Note: If you use `AM_ADMIN_USERNAME` and `AM_ADMIN_PASSWORD` direct SSO session mode, this step is completely unnecessary!)_
 
 ---
 
 ### 6. Required User Roles & Permissions Reference
 
-| Component | Default Superuser | Custom User Role Requirements |
-| :--- | :--- | :--- |
-| **PingAM** | `amadmin` | Built into the root realm (`/`). If using a delegated admin account, the user must belong to `cn=admins` in the target realm or hold the `Realm Administrator` privilege in AM. |
-| **PingIDM** | `openidm-admin` | Built into PingIDM configuration. If using a custom identity, assign the internal role `openidm-admin` or `openidm-authorized` in `conf/authentication.json` / `repo.json`. |
+| Component   | Default Superuser | Custom User Role Requirements                                                                                                                                                   |
+| :---------- | :---------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **PingAM**  | `amadmin`         | Built into the root realm (`/`). If using a delegated admin account, the user must belong to `cn=admins` in the target realm or hold the `Realm Administrator` privilege in AM. |
+| **PingIDM** | `openidm-admin`   | Built into PingIDM configuration. If using a custom identity, assign the internal role `openidm-admin` or `openidm-authorized` in `conf/authentication.json` / `repo.json`.     |
 
 ---
 
 ## 🛠️ Available MCP Tools
 
 ### Realms, Authentication Journeys & Trees
+
 - `listRealms`: Dynamically discovers and lists all configured realms (paths, names, aliases, active status) in any PingAM / AIC deployment.
 - `listJourneys`: Discovers all authentication trees in any target realm.
 - `getJourney`: Retrieves full node configuration, layout, and connections.
@@ -442,6 +460,7 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 > 🌐 **Dynamic Realm Architecture**: The MCP server is completely dynamic and is **never** restricted to a hardcoded list of realms. You can target any custom realm in your deployment (e.g. `workforce`, `partners`, `b2b`, `customers`, `alpha`, or root `/`). Call `listRealms` to discover available realms in any connected PingAM environment.
 
 ### Scripts & Policy
+
 - `listScripts`: Lists all groovy/javascript scripts in a realm.
 - `getAMScript`: Fetches script content and metadata.
 - `createScript`: Creates a new script in a target realm.
@@ -449,6 +468,7 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 - `deleteScript`: Removes a script.
 
 ### IDM Managed Objects (Users, Roles, Custom Schemas)
+
 - `listManagedObjects`: Discovers all managed object types (`user`, `role`, `organization`).
 - `getManagedObjectSchema`: Retrieves schema definitions and attribute properties.
 - `queryManagedObjects`: Queries objects using CREST `_queryFilter` syntax (`userName sw 'john'`).
@@ -458,6 +478,7 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 - `deleteManagedObject`: Deletes an object.
 
 ### OAuth 2.0 / OIDC Applications
+
 - `listOidcApps`: Lists registered client applications in any target realm.
 - `getOidcApp`: Retrieves full client configuration (scopes, grant types, redirect URIs).
 - `createOidcApp`: Provisions a new confidential or public OAuth2 client.
@@ -465,6 +486,7 @@ If you specifically prefer **not** to provide `AM_ADMIN_PASSWORD` and instead wa
 - `deleteOidcApp`: Removes an OAuth client application.
 
 ### Logging, Themes & Variables
+
 - `queryLogs`: Searches audit and monitoring logs with filtering.
 - `getLogSources`: Lists available log topics (`access`, `activity`, `authentication`, `config`).
 - `getThemes` / `createTheme` / `updateTheme` / `setDefaultTheme`: Customizes branding and login UI themes per realm.

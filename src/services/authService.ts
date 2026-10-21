@@ -15,7 +15,6 @@ const EXCHANGE_CLIENT_ID = 'AICMCPExchangeClient';
 const REDIRECT_URI_PORT = 3000;
 const REDIRECT_URI = `http://localhost:${REDIRECT_URI_PORT}`;
 
-
 /**
  * Clock skew tolerance in milliseconds
  * Tokens are considered expired this many milliseconds before actual expiry
@@ -299,7 +298,7 @@ class AuthService {
           'Content-Type': 'application/json',
           'Accept-API-Version': 'resource=2.0, protocol=1.0',
           'User-Agent': USER_AGENT,
-          'iPlanetDirectoryPro': this.cachedSsoToken
+          iPlanetDirectoryPro: this.cachedSsoToken
         }
       });
 
@@ -361,7 +360,7 @@ class AuthService {
     let res: Response;
     try {
       res = await fetch(authUrl, requestInit);
-    } catch (firstErr) {
+    } catch {
       // Retry once if a stale keep-alive socket closed during inactivity
       res = await fetch(authUrl, requestInit);
     }
@@ -419,7 +418,7 @@ class AuthService {
     if (process.env.SSO_TOKEN && this.ssoEnvTokenInvalidated) {
       throw new Error(
         'The configured SSO_TOKEN has expired or been invalidated by PingAM (401 Unauthorized). ' +
-        'Configure AM_ADMIN_USERNAME and AM_ADMIN_PASSWORD so the MCP server can automatically re-authenticate when sessions expire.'
+          'Configure AM_ADMIN_USERNAME and AM_ADMIN_PASSWORD so the MCP server can automatically re-authenticate when sessions expire.'
       );
     }
 
@@ -434,11 +433,11 @@ class AuthService {
   async getAuthHeader(scopes: string[], options: { forceRefresh?: boolean } = {}): Promise<Record<string, string>> {
     const ssoToken = await this.getSsoSessionToken(options.forceRefresh);
     if (ssoToken) {
-      return { 'iPlanetDirectoryPro': ssoToken };
+      return { iPlanetDirectoryPro: ssoToken };
     }
 
     const token = await this.getToken(scopes);
-    return { 'Authorization': `Bearer ${token}` };
+    return { Authorization: `Bearer ${token}` };
   }
 
   /**

@@ -23,31 +23,33 @@ export async function makeAuthenticatedRequest(
   if (isIdmRequest) {
     if (process.env.IDM_AUTH_TOKEN) {
       authHeaders = {
-        'Authorization': `Basic ${process.env.IDM_AUTH_TOKEN}`,
+        Authorization: `Basic ${process.env.IDM_AUTH_TOKEN}`,
         ...(process.env.IDM_ADMIN_USERNAME && { 'X-OpenIDM-Username': process.env.IDM_ADMIN_USERNAME }),
         ...(process.env.IDM_ADMIN_PASSWORD && { 'X-OpenIDM-Password': process.env.IDM_ADMIN_PASSWORD })
       };
     } else if (process.env.IDM_ADMIN_USERNAME && process.env.IDM_ADMIN_PASSWORD) {
-      const basic = Buffer.from(
-        `${process.env.IDM_ADMIN_USERNAME}:${process.env.IDM_ADMIN_PASSWORD}`
-      ).toString('base64');
+      const basic = Buffer.from(`${process.env.IDM_ADMIN_USERNAME}:${process.env.IDM_ADMIN_PASSWORD}`).toString(
+        'base64'
+      );
       authHeaders = {
-        'Authorization': `Basic ${basic}`,
+        Authorization: `Basic ${basic}`,
         'X-OpenIDM-Username': process.env.IDM_ADMIN_USERNAME,
         'X-OpenIDM-Password': process.env.IDM_ADMIN_PASSWORD
       };
     } else {
       // In on-prem / standalone AM deployments without IDM, don't trigger PKCE auth flow for missing IDM
-      const isStandaloneAm = Boolean(process.env.AM_BASE_URL || (process.env.AIC_BASE_URL && !process.env.AIC_BASE_URL.includes('forgeblocks.com')));
+      const isStandaloneAm = Boolean(
+        process.env.AM_BASE_URL || (process.env.AIC_BASE_URL && !process.env.AIC_BASE_URL.includes('forgeblocks.com'))
+      );
       if (isStandaloneAm && !process.env.IDM_BASE_URL) {
         throw new Error(
           'PingIDM is not configured in this environment (IDM_BASE_URL and IDM credentials are not set). ' +
-          'The platform is operating in PingAM standalone mode — all PingAM capabilities (Journeys, Nodes, Trees, Scripts, CORS) remain fully operational.'
+            'The platform is operating in PingAM standalone mode — all PingAM capabilities (Journeys, Nodes, Trees, Scripts, CORS) remain fully operational.'
         );
       }
       const token = await getAuthService().getToken(scopes);
       authHeaders = {
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       };
     }
   } else {
@@ -73,7 +75,7 @@ export async function makeAuthenticatedRequest(
     if (isIdmRequest) {
       throw new Error(
         `Unable to reach PingIDM service at ${url} (${err.cause?.code || err.message}). ` +
-        'PingAM remains operational, but the IDM service is unreachable or not running.'
+          'PingAM remains operational, but the IDM service is unreachable or not running.'
       );
     }
     // Retry once on transient socket error (e.g., stale keep-alive socket after inactivity)
@@ -89,7 +91,6 @@ export async function makeAuthenticatedRequest(
     authHeaders = await getAuthService().getAuthHeader(scopes, { forceRefresh: true });
     response = await executeFetch(authHeaders);
   }
-
 
   if (!response.ok) {
     const errorBody = await response.text();

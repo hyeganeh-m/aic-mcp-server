@@ -5,7 +5,6 @@ import { formatSuccess } from '../../utils/responseHelpers.js';
 import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
 const SCOPES = ['fr:am:*', 'fr:idm:*'];
 
 export const createOidcAppTool = {
@@ -74,17 +73,11 @@ export const createOidcAppTool = {
       });
 
       const isStandaloneAm = Boolean(
-        !process.env.IDM_BASE_URL &&
-        (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
+        !process.env.IDM_BASE_URL && (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
       );
 
       if (isStandaloneAm) {
-        return createToolResponse(
-          formatSuccess(
-            { oauth2Client: amData, clientId, realm },
-            amResponse
-          )
-        );
+        return createToolResponse(formatSuccess({ oauth2Client: amData, clientId, realm }, amResponse));
       }
 
       // Create IDM managed application with linking fields

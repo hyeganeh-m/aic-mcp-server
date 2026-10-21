@@ -5,8 +5,6 @@ import { formatSuccess } from '../../utils/responseHelpers.js';
 import { realmSchema } from '../../utils/validationHelpers.js';
 import { randomUUID } from 'crypto';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
-
 const SCOPES = ['fr:idm:*'];
 
 export const createThemeTool = {

@@ -13,4 +13,3 @@ if (!process.env.AIC_BASE_URL && !process.env.AM_BASE_URL) {
 if (process.env.AIC_BASE_URL) {
   process.env.AIC_BASE_URL = normalizeAicBaseUrl(process.env.AIC_BASE_URL);
 }
-

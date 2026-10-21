@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
 import { realmSchema, safePathSegmentSchema } from '../../utils/validationHelpers.js';

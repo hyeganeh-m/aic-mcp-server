@@ -62,5 +62,6 @@ jobs:
             SHA256SUMS.txt
 
       - name: Publish to npm
+        continue-on-error: true
         run: |
           npm publish ${{ steps.version.outputs.prerelease == 'true' && '--tag beta' || '' }} --access public

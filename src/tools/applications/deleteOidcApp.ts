@@ -4,8 +4,8 @@ import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHel
 import { formatSuccess } from '../../utils/responseHelpers.js';
 import { realmSchema } from '../../utils/validationHelpers.js';
 import { buildAMRealmUrl, AM_OAUTH2_CLIENT_HEADERS } from '../../utils/amHelpers.js';
+import { escapeCrestStringLiteral } from '../../utils/crestHelpers.js';
 
-const aicBaseUrl = process.env.AIC_BASE_URL;
 const SCOPES = ['fr:am:*', 'fr:idm:*'];
 
 export const deleteOidcAppTool = {
@@ -24,8 +24,7 @@ export const deleteOidcAppTool = {
   async toolFunction({ realm, name }: { realm: string; name: string }) {
     try {
       const isStandaloneAm = Boolean(
-        !process.env.IDM_BASE_URL &&
-        (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
+        !process.env.IDM_BASE_URL && (process.env.AM_BASE_URL || !process.env.AIC_BASE_URL?.includes('forgeblocks.com'))
       );
 
       if (isStandaloneAm) {
@@ -35,17 +34,14 @@ export const deleteOidcAppTool = {
           headers: AM_OAUTH2_CLIENT_HEADERS
         });
         return createToolResponse(
-          formatSuccess(
-            { deleted: [`PingAM OAuth2Client (${name}) in realm ${realm}`] },
-            amResponse
-          )
+          formatSuccess({ deleted: [`PingAM OAuth2Client (${name}) in realm ${realm}`] }, amResponse)
         );
       }
 
       // Look up IDM managed application by name
       const idmQueryUrl =
         `${getIdmBaseUrl()}/managed/${realm}_application` +
-        `?_queryFilter=${encodeURIComponent(`name eq "${name}"`)}&_fields=_id,ssoEntities`;
+        `?_queryFilter=${encodeURIComponent(`name eq "${escapeCrestStringLiteral(name)}"`)}&_fields=_id,ssoEntities`;
       const { data: queryData } = await makeAuthenticatedRequest(idmQueryUrl, SCOPES, {
         method: 'GET'
       });

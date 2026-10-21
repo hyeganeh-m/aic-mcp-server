@@ -1,10 +1,7 @@
 import { getIdmBaseUrl } from '../../utils/urlHelpers.js';
-import { z } from 'zod';
 import { makeAuthenticatedRequest, createToolResponse } from '../../utils/apiHelpers.js';
 import { formatSuccess } from '../../utils/responseHelpers.js';
 import { realmSchema } from '../../utils/validationHelpers.js';
-
-const aicBaseUrl = process.env.AIC_BASE_URL;
 
 const SCOPES = ['fr:idm:*'];
 

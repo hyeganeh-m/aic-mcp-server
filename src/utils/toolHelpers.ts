@@ -38,7 +38,9 @@ export function getAllTools(): Tool[] {
  */
 export function getAllScopes(): string[] {
   if (process.env.MCP_SCOPES) {
-    return process.env.MCP_SCOPES.split(' ').map((s) => s.trim()).filter(Boolean);
+    return process.env.MCP_SCOPES.split(' ')
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   const allTools = getAllTools();
   return Array.from(new Set(allTools.flatMap((tool) => tool.scopes)));

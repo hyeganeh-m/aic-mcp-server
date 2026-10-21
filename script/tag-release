@@ -6,6 +6,7 @@ set -e
 # Usage: ./script/tag-release v1.0.0-beta.1
 
 VERSION=$1
+AUTO_YES=$2
 
 # Colors for output
 RED='\033[0;31m'
@@ -49,10 +50,10 @@ fi
 
 info "Preparing to release ${GIT_TAG}..."
 
-# Check if on main branch
+# Check if on main or feat/universal-platform branch
 CURRENT_BRANCH=$(git branch --show-current)
-if [ "$CURRENT_BRANCH" != "main" ]; then
-    error "Must be on 'main' branch (currently on: $CURRENT_BRANCH)"
+if [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "feat/universal-platform" ]; then
+    error "Must be on 'main' or 'feat/universal-platform' branch (currently on: $CURRENT_BRANCH)"
 fi
 
 # Check if working directory is clean
@@ -87,13 +88,15 @@ CURRENT_VERSION=$(node -p "require('./package.json').version")
 info "Current version: v${CURRENT_VERSION}"
 info "New version: ${GIT_TAG}"
 
-# Confirm with user
-echo ""
-read -p "Create release tag ${GIT_TAG}? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    warn "Release cancelled"
-    exit 0
+# Confirm with user unless -y / --yes is passed
+if [ "$AUTO_YES" != "-y" ] && [ "$AUTO_YES" != "--yes" ]; then
+    echo ""
+    read -p "Create release tag ${GIT_TAG} on branch ${CURRENT_BRANCH}? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        warn "Release cancelled"
+        exit 0
+    fi
 fi
 
 # Use npm version to update package.json, package-lock.json, and create tag
@@ -102,10 +105,10 @@ npm version "$NPM_VERSION" -m "Release %s"
 
 # Push commit and tag to remote
 info "Pushing to remote..."
-git push origin main --follow-tags
+git push origin "$CURRENT_BRANCH" --follow-tags
 
 info "✓ Successfully created and pushed tag ${GIT_TAG}"
 echo ""
 info "The release workflow will run automatically."
-info "Monitor: https://github.com/pingidentity/aic-mcp-server/actions"
+info "Monitor: https://github.com/hyeganeh-m/aic-mcp-server/actions"
 echo ""

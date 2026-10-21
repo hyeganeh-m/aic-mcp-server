@@ -65,7 +65,7 @@ async function main() {
   console.log('📋 Scenario 1: Inspecting AM Authentication Journeys (realm: customers)...');
   const journeysRes = await listJourneysTool.toolFunction({ realm: 'customers' });
   const journeysData = JSON.parse(journeysRes.content[0].text);
-  const journeyIds = journeysData.result.map(j => j._id);
+  const journeyIds = journeysData.result.map((j) => j._id);
   console.log(`   Found ${journeyIds.length} journeys: ${journeyIds.join(', ')}`);
   if (!journeyIds.includes('SimpleLogin')) {
     throw new Error('Expected SimpleLogin journey not found in realm customers');
@@ -152,7 +152,7 @@ async function main() {
   // Verify journey listing
   const verifyJourneys = await listJourneysTool.toolFunction({ realm: 'customers' });
   const verifyData = JSON.parse(verifyJourneys.content[0].text);
-  if (!verifyData.result.some(j => j._id === testJourneyName)) {
+  if (!verifyData.result.some((j) => j._id === testJourneyName)) {
     throw new Error(`Deployed journey ${testJourneyName} not found in AM tree catalog`);
   }
   console.log('   Verified journey exists in PingAM realm tree catalog.');
@@ -172,7 +172,7 @@ async function main() {
   console.log('================================================================');
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('\n❌ Execution error:', err);
   process.exit(1);
 });
